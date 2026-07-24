@@ -1,0 +1,25 @@
+{
+  "name": "oxibase-twitter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A microblog built entirely on OxiBase — posts, replies, likes, a relational follow graph, per-post impressions, live notifications and row-level security.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "setup": "node scripts/setup.mjs",
+    "seed": "node scripts/seed.mjs"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "oxibase-js": "https://oxibase.baltavista.com/oxibase-js.tgz",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}
