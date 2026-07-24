@@ -70,14 +70,18 @@ main { border-right: 1px solid var(--line); min-height: 100vh; min-width: 0; ove
 .post .name { font-weight: 700; }
 .post .at, .post .dot, .post .when { color: var(--muted); font-size: 17px; }
 .post .body { white-space: pre-wrap; word-wrap: break-word; margin: 4px 0 0; font-size: 19px; line-height: 1.5; }
-/* Media is shown in a fixed 5:3 frame and cropped to fill it, so a timeline
-   of mixed portrait and landscape photos keeps an even rhythm rather than
-   each post being as tall as whatever was uploaded. */
+/* Media follows the timeline convention: the natural aspect ratio is kept, and
+   only what exceeds the bounds is cropped. A landscape photo simply gets
+   shorter; a portrait one is capped so a single post cannot fill the screen.
+   The detail view of a post allows more height, as it has the space. */
 .media, .post .media {
-  margin-top: 10px; border-radius: 14px; border: 1px solid var(--line);
-  width: 100%; max-width: 100%; aspect-ratio: 5 / 3; object-fit: cover; object-position: center;
+  margin-top: 12px; border-radius: 16px; border: 1px solid var(--line);
+  width: 100%; max-width: 100%; max-height: 560px;
+  object-fit: cover; object-position: center;
   display: block; background: var(--panel-2);
 }
+.post.detail .media { max-height: 760px; }
+
 .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--panel-2); display: grid; place-items: center; font-weight: 700; color: var(--accent); overflow: hidden; flex: none; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .avatar.sm { width: 38px; height: 38px; font-size: 15px; }
@@ -125,3 +129,29 @@ label.field span { display: block; margin-bottom: 5px; }
 .spark i { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; opacity: 0.85; }
 .notif { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .notif.unread { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+/* ── Loading ─────────────────────────────────────────────────────────────── */
+.spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto;
+}
+.loading { padding: 44px 16px; display: grid; place-items: center; gap: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+
+/* A skeleton post, so the timeline keeps its shape while it loads rather than
+   collapsing and then jumping. */
+.skeleton { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.skeleton .bar, .skeleton .circle { background: var(--panel-2); position: relative; overflow: hidden; }
+.skeleton .circle { width: 50px; height: 50px; border-radius: 50%; }
+.skeleton .bar { height: 12px; border-radius: 6px; margin-bottom: 9px; }
+.skeleton .bar::after, .skeleton .circle::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 7%, transparent), transparent);
+  animation: shimmer 1.3s infinite;
+}
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton .bar::after, .skeleton .circle::after { animation: none; } }

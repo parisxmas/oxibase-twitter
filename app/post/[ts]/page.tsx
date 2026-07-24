@@ -11,6 +11,7 @@ import { postByTs, repliesTo } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Composer } from "../../composer";
 import { Feed, useFeedData } from "../../feed";
+import { Spinner } from "../../loading-ui";
 
 export default function Thread({ params }: { params: Promise<{ ts: string }> }) {
   const { ts } = use(params);
@@ -34,7 +35,7 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
   const all = post ? [post, ...replies] : replies;
   const state = useFeedData(all);
 
-  if (loading) return <p className="center muted">Loading…</p>;
+  if (loading) return <Spinner />;
   if (!post) {
     return (
       <>
@@ -50,7 +51,7 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
         <Link href="/">←</Link>
         <h1>Post</h1>
       </div>
-      <Feed posts={[post]} state={state} onChanged={load} showAnalytics />
+      <Feed posts={[post]} state={state} onChanged={load} showAnalytics detail />
       {session && <Composer replyTo={{ ts: post.ts, owner: post.owner }} placeholder="Post your reply" onPosted={load} />}
       <Feed posts={replies} state={state} onChanged={load} empty="No replies yet." showAnalytics={false} />
     </>

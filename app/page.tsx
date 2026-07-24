@@ -14,6 +14,7 @@ import { timeline } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Composer } from "./composer";
 import { Feed, useFeedData, useLivePosts } from "./feed";
+import { SkeletonFeed } from "./loading-ui";
 
 export default function Home() {
   const { session, ready } = useSession();
@@ -87,7 +88,7 @@ export default function Home() {
       )}
 
       {loading ? (
-        <p className="center muted">Loading…</p>
+        <SkeletonFeed />
       ) : (
         <Feed
           posts={shown}

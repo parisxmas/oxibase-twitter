@@ -10,6 +10,7 @@ import { oxibase } from "@/lib/oxibase";
 import { useSession } from "@/lib/session";
 import { markNotificationsRead, myNotifications } from "@/lib/data";
 import { relativeTime, type Notification } from "@/lib/types";
+import { Spinner } from "../loading-ui";
 
 const VERB: Record<Notification["kind"], string> = {
   like: "liked your post",
@@ -65,7 +66,7 @@ export default function Notifications() {
         <h1>Notifications</h1>
         <span className="engine" style={{ marginLeft: "auto" }}>realtime · row-level rule</span>
       </div>
-      {loading && <p className="center muted">Loading…</p>}
+      {loading && <Spinner />}
       {!loading && items.length === 0 && <p className="center muted">Nothing yet.</p>}
       {items.map((n) => (
         <div key={n._id ?? `${n.ts}-${n.actor}`} className={`notif ${n.read ? "" : "unread"}`}>

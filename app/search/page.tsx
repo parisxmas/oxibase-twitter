@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { searchPosts } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Feed, useFeedData } from "../feed";
+import { SkeletonFeed, Spinner } from "../loading-ui";
 
 function SearchInner() {
   const params = useSearchParams();
@@ -47,7 +48,7 @@ function SearchInner() {
         array (<code>contains</code>). Both are URL filters the server turns into a query.
       </p>
       {loading ? (
-        <p className="center muted">Searching…</p>
+        <SkeletonFeed rows={3} />
       ) : (
         <Feed posts={posts} state={state} onChanged={() => run(q)} empty={initial ? "No matches." : "Type something above."} />
       )}
@@ -57,7 +58,7 @@ function SearchInner() {
 
 export default function Search() {
   return (
-    <Suspense fallback={<p className="center muted">Loading…</p>}>
+    <Suspense fallback={<Spinner />}>
       <SearchInner />
     </Suspense>
   );

@@ -87,12 +87,14 @@ export function Feed({
   onChanged,
   empty = "Nothing here yet.",
   showAnalytics = true,
+  detail = false,
 }: {
   posts: Post[];
   state: FeedState;
   onChanged: () => void;
   empty?: string;
   showAnalytics?: boolean;
+  detail?: boolean;
 }) {
   if (posts.length === 0) {
     return <p className="center muted">{empty}</p>;
@@ -109,6 +111,7 @@ export function Feed({
           reposted={state.reposted.has(p.ts)}
           saved={state.saved.has(p.ts)}
           showAnalytics={showAnalytics}
+          detail={detail}
           onChanged={() => {
             state.reload();
             onChanged();

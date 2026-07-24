@@ -20,6 +20,7 @@ export function PostCard({
   saved,
   onChanged,
   showAnalytics = false,
+  detail = false,
 }: {
   post: Post;
   author?: Profile | null;
@@ -29,6 +30,8 @@ export function PostCard({
   saved: boolean;
   onChanged: () => void;
   showAnalytics?: boolean;
+  /** The single-post page: media may be taller there, as Twitter's is. */
+  detail?: boolean;
 }) {
   const { session } = useSession();
   const [busy, setBusy] = useState(false);
@@ -81,7 +84,7 @@ export function PostCard({
   const max = Math.max(1, ...(views?.hourly ?? []).map((h) => h.value));
 
   return (
-    <article className="post" ref={ref as React.RefObject<HTMLElement>}>
+    <article className={`post ${detail ? "detail" : ""}`} ref={ref as React.RefObject<HTMLElement>}>
       <Link href={`/u/${post.handle}`} className="avatar">
         {author?.avatar_key ? (
           <img src={mediaUrl(author.avatar_key)} alt="" />

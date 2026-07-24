@@ -9,6 +9,7 @@ import { useSession } from "@/lib/session";
 import { myBookmarks, timeline } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Feed, useFeedData } from "../feed";
+import { SkeletonFeed } from "../loading-ui";
 
 export default function Bookmarks() {
   const { session, ready } = useSession();
@@ -48,7 +49,7 @@ export default function Bookmarks() {
         This page asks the server for every bookmark and gets only yours — the filtering is the
         rule&apos;s, not the query&apos;s.
       </p>
-      {loading ? <p className="center muted">Loading…</p> : <Feed posts={posts} state={state} onChanged={load} empty="Nothing saved yet." />}
+      {loading ? <SkeletonFeed rows={3} /> : <Feed posts={posts} state={state} onChanged={load} empty="Nothing saved yet." />}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { useSession } from "@/lib/session";
 import { postsByHandle, profileByHandle } from "@/lib/data";
 import type { Post, Profile } from "@/lib/types";
 import { Feed, useFeedData } from "../../feed";
+import { Spinner } from "../../loading-ui";
 import { FollowButton } from "../../follow-button";
 
 export default function ProfilePage({ params }: { params: Promise<{ handle: string }> }) {
@@ -34,7 +35,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const state = useFeedData(posts);
   const mine = session?.email === profile?.owner;
 
-  if (loading) return <p className="center muted">Loading…</p>;
+  if (loading) return <Spinner />;
   if (!profile) {
     return (
       <>
