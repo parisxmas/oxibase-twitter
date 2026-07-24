@@ -70,7 +70,14 @@ main { border-right: 1px solid var(--line); min-height: 100vh; min-width: 0; ove
 .post .name { font-weight: 700; }
 .post .at, .post .dot, .post .when { color: var(--muted); font-size: 17px; }
 .post .body { white-space: pre-wrap; word-wrap: break-word; margin: 4px 0 0; font-size: 19px; line-height: 1.5; }
-.media, .post .media { margin-top: 10px; border-radius: 14px; border: 1px solid var(--line); width: 100%; max-width: 100%; height: auto; display: block; }
+/* Media is shown in a fixed 5:3 frame and cropped to fill it, so a timeline
+   of mixed portrait and landscape photos keeps an even rhythm rather than
+   each post being as tall as whatever was uploaded. */
+.media, .post .media {
+  margin-top: 10px; border-radius: 14px; border: 1px solid var(--line);
+  width: 100%; max-width: 100%; aspect-ratio: 5 / 3; object-fit: cover; object-position: center;
+  display: block; background: var(--panel-2);
+}
 .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--panel-2); display: grid; place-items: center; font-weight: 700; color: var(--accent); overflow: hidden; flex: none; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .avatar.sm { width: 38px; height: 38px; font-size: 15px; }
