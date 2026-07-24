@@ -48,6 +48,20 @@ export function mediaUrl(key: string): string {
   return `/api/photo/${key}`;
 }
 
+/**
+ * A call to the data plane outside the query builder — currently the native
+ * aggregation endpoint, which PostgREST has no vocabulary for. Uses the
+ * signed-in user's token when there is one, else the public anon key, so the
+ * server applies the same rules it would to any other read.
+ */
+export async function dataFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const token = loadSession()?.token ?? ANON;
+  return fetch(`${URL_}/${REF}${path}`, {
+    ...init,
+    headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` },
+  });
+}
+
 export const SESSION_KEY = "chirp_session";
 
 /** Persist the session so a reload keeps you signed in. */

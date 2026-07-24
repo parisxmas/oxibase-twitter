@@ -8,7 +8,15 @@ import { useCallback, useEffect, useState } from "react";
 import { oxibase } from "@/lib/oxibase";
 import { useSession } from "@/lib/session";
 import type { Post, Profile } from "@/lib/types";
-import { allLikes, allReposts, myBookmarks, profiles, repliesTo } from "@/lib/data";
+import {
+  likeCounts,
+  myBookmarks,
+  myLikes,
+  myReposts,
+  profiles,
+  replyCounts,
+  repostCounts,
+} from "@/lib/data";
 import { PostCard, type Counts } from "./post-card";
 
 export type FeedState = {
@@ -21,7 +29,7 @@ export type FeedState = {
 };
 
 /** Load everything that decorates a set of posts. */
-export function useFeedData(posts: Post[]): FeedState {
+export function useFeedData(_posts: Post[]): FeedState {
   const { session } = useSession();
   const [authors, setAuthors] = useState<Map<string, Profile>>(new Map());
   const [counts, setCounts] = useState<Map<number, Counts>>(new Map());
@@ -35,35 +43,41 @@ export function useFeedData(posts: Post[]): FeedState {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [profs, likes, reps] = await Promise.all([profiles(), allLikes(), allReposts()]);
+      // Four requests, whatever the timeline's length. Counting used to mean
+      // one request per post for replies plus downloading every like in the
+      // project; both are now a single `$group` each, done by the engine.
+      const [profs, likes, reposts, replies] = await Promise.all([
+        profiles(),
+        likeCounts(),
+        repostCounts(),
+        replyCounts(),
+      ]);
       if (!alive) return;
 
       setAuthors(new Map(profs.map((p) => [p.handle, p])));
 
       const c = new Map<number, Counts>();
-      const bump = (ts: number, key: keyof Counts) => {
-        const cur = c.get(ts) ?? { likes: 0, reposts: 0, replies: 0 };
-        cur[key] += 1;
-        c.set(ts, cur);
-      };
-      for (const l of likes) bump(l.post_ts, "likes");
-      for (const r of reps) bump(r.post_ts, "reposts");
-      // Reply counts come from the posts themselves.
-      const replyCounts = await Promise.all(posts.map((p) => repliesTo(p.ts)));
-      posts.forEach((p, i) => {
-        const cur = c.get(p.ts) ?? { likes: 0, reposts: 0, replies: 0 };
-        cur.replies = replyCounts[i].length;
-        c.set(p.ts, cur);
-      });
-      if (!alive) return;
+      for (const ts of new Set([...likes.keys(), ...reposts.keys(), ...replies.keys()])) {
+        c.set(ts, {
+          likes: likes.get(ts) ?? 0,
+          reposts: reposts.get(ts) ?? 0,
+          replies: replies.get(ts) ?? 0,
+        });
+      }
       setCounts(c);
 
       if (session) {
-        setLiked(new Set(likes.filter((l) => l.owner === session.email).map((l) => l.post_ts)));
-        setReposted(new Set(reps.filter((r) => r.owner === session.email).map((r) => r.post_ts)));
-        // No filter needed: the read rule returns only your own bookmarks.
-        const marks = await myBookmarks();
-        if (alive) setSaved(new Set(marks.map((b) => b.post_ts)));
+        // What *you* reacted to is a filtered read of your own rows — small,
+        // and unrelated to how many other people reacted.
+        const [mine, minerep, marks] = await Promise.all([
+          myLikes(session.email),
+          myReposts(session.email),
+          myBookmarks(),
+        ]);
+        if (!alive) return;
+        setLiked(new Set(mine));
+        setReposted(new Set(minerep));
+        setSaved(new Set(marks.map((b) => b.post_ts)));
       } else {
         setLiked(new Set());
         setReposted(new Set());
@@ -73,10 +87,10 @@ export function useFeedData(posts: Post[]): FeedState {
     return () => {
       alive = false;
     };
-    // `posts` is compared by its identity list, so a new array of the same
-    // posts does not re-fetch.
+    // Counts are per project, not per visible post, so this does not re-run
+    // when the list changes — only when the viewer or a write does.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts.map((p) => p.ts).join(","), session?.email, nonce]);
+  }, [session?.email, nonce]);
 
   return { authors, counts, liked, reposted, saved, reload };
 }

@@ -7,7 +7,7 @@
 // a browser key cannot do (upload an image, append an impression, change the
 // follow graph) live in route handlers instead; see app/api.
 
-import { oxibase } from "./oxibase";
+import { dataFetch, oxibase } from "./oxibase";
 import type { Bookmark, Like, Notification, Post, Profile, Repost } from "./types";
 import { parseTags } from "./types";
 
@@ -105,14 +105,49 @@ export async function deletePost(post: Post, me: string): Promise<string | null>
 
 // ── Reactions ───────────────────────────────────────────────────────────────
 
-export async function allLikes(): Promise<Like[]> {
-  const { data } = await db().from("likes").select("*").limit(1000);
-  return (data ?? []) as Like[];
+/**
+ * Count rows per value of `field`, server-side.
+ *
+ * The alternative is to download the rows and count them in the browser, or —
+ * worse — ask once per post, which is one request per row on screen. A `$group`
+ * is one request whose response is the counts themselves, so it does not grow
+ * with the number of likes, only with the number of distinct posts.
+ */
+async function countBy(
+  collection: string,
+  field: string,
+  match?: Record<string, unknown>,
+): Promise<Map<number, number>> {
+  const pipeline = [
+    ...(match ? [{ $match: match }] : []),
+    { $group: { _id: `$${field}`, n: { $sum: 1 } } },
+  ];
+  const res = await dataFetch(`/api/${collection}/aggregate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pipeline }),
+  });
+  if (!res.ok) return new Map();
+  const rows = (await res.json()) as { _id: number | null; n: number }[];
+  const out = new Map<number, number>();
+  for (const r of rows) if (typeof r._id === "number") out.set(r._id, r.n);
+  return out;
 }
 
-export async function allReposts(): Promise<Repost[]> {
-  const { data } = await db().from("reposts").select("*").limit(1000);
-  return (data ?? []) as Repost[];
+export const likeCounts = () => countBy("likes", "post_ts");
+export const repostCounts = () => countBy("reposts", "post_ts");
+/** Replies are posts too, so their count is a group over `reply_to`. */
+export const replyCounts = () => countBy("posts", "reply_to", { reply_to: { $ne: null } });
+
+/** Just the viewer's own reactions — a filtered read, not the whole table. */
+export async function myLikes(me: string): Promise<number[]> {
+  const { data } = await db().from("likes").select("post_ts").eq("owner", me).limit(1000);
+  return ((data ?? []) as Like[]).map((l) => l.post_ts);
+}
+
+export async function myReposts(me: string): Promise<number[]> {
+  const { data } = await db().from("reposts").select("post_ts").eq("owner", me).limit(1000);
+  return ((data ?? []) as Repost[]).map((r) => r.post_ts);
 }
 
 export async function toggleLike(post: Post, me: string, liked: boolean): Promise<void> {
