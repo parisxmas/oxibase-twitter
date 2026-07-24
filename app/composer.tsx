@@ -39,7 +39,10 @@ export function Composer({
       blobRef.current = blob;
       setPreview({
         url: URL.createObjectURL(blob),
-        note: `${formatBytes(originalBytes)} → ${formatBytes(blob.size)}`,
+        note:
+          blob.size < originalBytes
+            ? `resized in your browser: ${formatBytes(originalBytes)} → ${formatBytes(blob.size)}`
+            : `${formatBytes(blob.size)} — already small enough to send as it is`,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -115,7 +118,7 @@ export function Composer({
             >
               ✕
             </button>
-            <div className="muted small">resized in your browser: {preview.note}</div>
+            <div className="muted small">{preview.note}</div>
           </div>
         )}
         {error && <div className="error" style={{ margin: "8px 0" }}>{error}</div>}

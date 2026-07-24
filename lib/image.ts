@@ -101,6 +101,16 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
     blob = await encode(canvas, type, quality);
   }
 
+  // Re-encoding does not always help. An image that was already small, or
+  // already well compressed, can come back *larger* — at which point the
+  // honest thing is to send the original rather than a bigger "optimised"
+  // copy. Only for formats the browser can display as-is, and only when it
+  // fits the budget anyway.
+  const keepable = ["image/jpeg", "image/webp", "image/png"].includes(file.type);
+  if (keepable && file.size <= blob.size && file.size <= TARGET_BYTES && scale === 1) {
+    return { blob: file, width: sw, height: sh, originalBytes: file.size };
+  }
+
   return { blob, width, height, originalBytes: file.size };
 }
 
