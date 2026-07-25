@@ -184,3 +184,23 @@ label.field span { display: block; margin-bottom: 5px; }
 /* The post being viewed is the subject of the page: a little more room. */
 .post.detail { padding-top: 16px; padding-bottom: 16px; }
 .post.detail .body { font-size: 22px; line-height: 1.4; }
+
+/* ── Lightbox ────────────────────────────────────────────────────────────── */
+.media { cursor: zoom-in; }
+dialog.lightbox {
+  border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh;
+  width: 100%; height: 100%; overflow: hidden;
+  display: grid; place-items: center;
+}
+dialog.lightbox::backdrop { background: rgba(0, 0, 0, 0.86); }
+dialog.lightbox img {
+  max-width: 94vw; max-height: 92vh; width: auto; height: auto;
+  border-radius: 10px; display: block; cursor: zoom-out;
+}
+.lightbox-close {
+  position: fixed; top: 16px; right: 18px;
+  background: rgba(0, 0, 0, 0.55); color: #fff; border: 0;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+}
+.lightbox-close:hover { background: rgba(0, 0, 0, 0.8); }

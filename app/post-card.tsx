@@ -10,6 +10,7 @@ import { useSession, authHeader } from "@/lib/session";
 import { relativeTime, type Post, type Profile } from "@/lib/types";
 import { deletePost, postByTs, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
 import { IconBookmark, IconChart, IconHeart, IconReply, IconRepost, IconTrash } from "./icons";
+import { Lightbox } from "./lightbox";
 
 export type Counts = { likes: number; reposts: number; replies: number };
 
@@ -41,6 +42,7 @@ export function PostCard({
   const [parentHandle, setParentHandle] = useState<string | null>(post.reply_to_handle ?? null);
   const [views, setViews] = useState<{ total: number; hourly: { ts: number; value: number }[] } | null>(null);
   const [openAnalytics, setOpenAnalytics] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
   const seen = useRef(false);
   const ref = useRef<HTMLElement | null>(null);
 
@@ -84,7 +86,8 @@ export function PostCard({
   function openThread(e: React.MouseEvent) {
     if (detail) return;
     const el = e.target as HTMLElement;
-    if (el.closest("a, button, img, svg")) return;
+    // Links, buttons, the image (which zooms) and icons keep their own click.
+    if (el.closest("a, button, img, svg, dialog")) return;
     if (window.getSelection()?.toString()) return;
     router.push(`/post/${post.ts}`);
   }
@@ -159,7 +162,25 @@ export function PostCard({
 
         <p className="body">{linkify(post.body)}</p>
 
-        {post.image_key && <img className="media" src={mediaUrl(post.image_key)} alt="" />}
+        {post.image_key && (
+          <>
+            <img
+              className="media"
+              src={mediaUrl(post.image_key)}
+              alt=""
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomed(true);
+              }}
+            />
+            <Lightbox
+              src={mediaUrl(post.image_key)}
+              alt={`Image posted by @${post.handle}`}
+              open={zoomed}
+              onClose={() => setZoomed(false)}
+            />
+          </>
+        )}
 
         <div className="actions">
           <Link href={`/post/${post.ts}`} className="muted small" style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
