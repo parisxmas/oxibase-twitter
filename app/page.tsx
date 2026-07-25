@@ -21,9 +21,17 @@ export default function Home() {
   const { session, ready } = useSession();
   const [pending, setPending] = useState<Post[]>([]);
   const [tab, setTab] = useState<"all" | "following">("all");
-  const [following, setFollowing] = useState<Set<string>>(new Set());
+  const [following, setFollowing] = useState<string[]>([]);
+  const [knowsFollowing, setKnowsFollowing] = useState(false);
 
-  const fetchPage = useCallback((limit: number, before?: number) => timeline(limit, before), []);
+  // The Following tab is a different query, not a filter over this one.
+  const fetchPage = useCallback(
+    (limit: number, before?: number) =>
+      tab === "following"
+        ? timeline(limit, before, [...following, ...(session ? [session.email] : [])])
+        : timeline(limit, before),
+    [tab, following, session],
+  );
   const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
   const load = useCallback(() => {
@@ -34,12 +42,17 @@ export default function Home() {
   // Who the signed-in reader follows — a SQL query, served by a route handler.
   useEffect(() => {
     if (!session) {
-      setFollowing(new Set());
+      setFollowing([]);
+      setKnowsFollowing(false);
+      setTab("all");
       return;
     }
     fetch(`/api/follow?who=${encodeURIComponent(session.email)}`)
       .then((r) => (r.ok ? r.json() : { following: [] }))
-      .then((d) => setFollowing(new Set(d.following ?? [])));
+      .then((d) => {
+        setFollowing(d.following ?? []);
+        setKnowsFollowing(true);
+      });
   }, [session]);
 
   // Live arrivals are held rather than injected, so the page does not move
@@ -50,11 +63,7 @@ export default function Home() {
     setPending((prev) => (prev.some((x) => x.ts === p.ts) ? prev : [p, ...prev]));
   });
 
-  const shown =
-    tab === "all"
-      ? posts
-      : posts.filter((p) => following.has(p.owner) || p.owner === session?.email);
-  const state = useFeedData(shown);
+  const state = useFeedData(posts);
 
   const newOnes = pending.filter((p) => !posts.some((x) => x.ts === p.ts));
 
@@ -65,14 +74,16 @@ export default function Home() {
         <span className="engine" style={{ marginLeft: "auto" }}>documents · realtime</span>
       </div>
 
-      <div className="tabs">
-        <button className={tab === "all" ? "on" : ""} onClick={() => setTab("all")}>
-          Everyone
-        </button>
-        <button className={tab === "following" ? "on" : ""} onClick={() => setTab("following")}>
-          Following
-        </button>
-      </div>
+      {session && (
+        <div className="tabs">
+          <button className={tab === "all" ? "on" : ""} onClick={() => setTab("all")}>
+            Everyone
+          </button>
+          <button className={tab === "following" ? "on" : ""} onClick={() => setTab("following")}>
+            Following
+          </button>
+        </div>
+      )}
 
       {ready && session && <Composer onPosted={load} />}
       {ready && !session && (
@@ -93,13 +104,15 @@ export default function Home() {
       ) : (
         <>
           <Feed
-            posts={shown}
+            posts={posts}
             state={state}
             onChanged={load}
             onRemoved={(ts) => setPosts((prev) => prev.filter((p) => p.ts !== ts))}
             empty={
               tab === "following"
-                ? "Nothing from the people you follow yet — try the Everyone tab."
+                ? knowsFollowing && following.length === 0
+                  ? "You do not follow anyone yet — try the Everyone tab."
+                  : "Nobody you follow has posted yet."
                 : "No posts yet. Be the first."
             }
           />

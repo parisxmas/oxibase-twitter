@@ -26,8 +26,18 @@ const db = () => oxibase();
  * Paged by `ts` rather than by offset: a cursor cannot skip or repeat a row
  * when something is posted while you are reading, which an OFFSET can.
  */
-export async function timeline(limit = 20, before?: number): Promise<Post[]> {
+export async function timeline(
+  limit = 20,
+  before?: number,
+  owners?: string[],
+): Promise<Post[]> {
+  // Restricting to a set of authors happens in the query, not after it.
+  // Filtering a page of twenty down to "people you follow" hides everything
+  // further back: an empty screen would mean "none in the last twenty",
+  // not "none at all".
+  if (owners && owners.length === 0) return [];
   let q = db().from("posts").select("*").is("reply_to", null);
+  if (owners) q = q.in("owner", owners);
   if (before) q = q.lt("ts", before);
   const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];
