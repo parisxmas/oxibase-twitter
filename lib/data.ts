@@ -80,6 +80,7 @@ export async function createPost(input: {
   body: string;
   image_key?: string | null;
   reply_to?: number | null;
+  reply_to_handle?: string | null;
   repost_of?: number | null;
 }): Promise<{ post?: Post; error: string | null }> {
   const post: Post = {
@@ -88,6 +89,7 @@ export async function createPost(input: {
     body: input.body,
     image_key: input.image_key ?? null,
     reply_to: input.reply_to ?? null,
+    reply_to_handle: input.reply_to_handle ?? null,
     repost_of: input.repost_of ?? null,
     tags: parseTags(input.body),
     ts: Date.now(),

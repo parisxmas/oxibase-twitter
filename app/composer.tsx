@@ -13,7 +13,7 @@ export function Composer({
   placeholder = "What's happening?",
   onPosted,
 }: {
-  replyTo?: { ts: number; owner: string } | null;
+  replyTo?: { ts: number; owner: string; handle?: string } | null;
   placeholder?: string;
   onPosted: () => void;
 }) {
@@ -92,6 +92,7 @@ export function Composer({
         body: body.trim(),
         image_key,
         reply_to: replyTo?.ts ?? null,
+        reply_to_handle: replyTo?.handle ?? null,
       });
       if (err) throw new Error(err);
 

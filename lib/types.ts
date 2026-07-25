@@ -13,6 +13,8 @@ export type Post = {
   ts: number;
   /** The `ts` of the post this replies to, if any. */
   reply_to?: number | null;
+  /** Denormalised so "Replying to @x" needs no second read. */
+  reply_to_handle?: string | null;
   /** The `ts` of the post this reposts, if any (the body is then empty). */
   repost_of?: number | null;
   /** Lower-cased tags parsed out of the body, for search. */

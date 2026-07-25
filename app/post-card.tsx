@@ -3,11 +3,12 @@
 // One post, with its actions. Used by every timeline in the app.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { mediaUrl } from "@/lib/oxibase";
 import { useSession, authHeader } from "@/lib/session";
 import { relativeTime, type Post, type Profile } from "@/lib/types";
-import { deletePost, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
+import { deletePost, postByTs, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
 import { IconBookmark, IconChart, IconHeart, IconReply, IconRepost, IconTrash } from "./icons";
 
 export type Counts = { likes: number; reposts: number; replies: number };
@@ -35,7 +36,9 @@ export function PostCard({
   detail?: boolean;
 }) {
   const { session } = useSession();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [parentHandle, setParentHandle] = useState<string | null>(post.reply_to_handle ?? null);
   const [views, setViews] = useState<{ total: number; hourly: { ts: number; value: number }[] } | null>(null);
   const [openAnalytics, setOpenAnalytics] = useState(false);
   const seen = useRef(false);
@@ -66,6 +69,26 @@ export function PostCard({
 
   const mine = session?.email === post.owner;
 
+  // Older replies predate the denormalised handle; look it up once so the
+  // "Replying to" line names a person rather than "a post".
+  useEffect(() => {
+    if (!post.reply_to || parentHandle) return;
+    postByTs(post.reply_to).then((p) => p && setParentHandle(p.handle));
+  }, [post.reply_to, parentHandle]);
+
+  /**
+   * Open the thread when the card is clicked — but not when the click was
+   * meant for something inside it. A link, a button or a selection of text
+   * should behave normally.
+   */
+  function openThread(e: React.MouseEvent) {
+    if (detail) return;
+    const el = e.target as HTMLElement;
+    if (el.closest("a, button, img, svg")) return;
+    if (window.getSelection()?.toString()) return;
+    router.push(`/post/${post.ts}`);
+  }
+
   async function act(fn: () => Promise<unknown>) {
     if (!session) return;
     setBusy(true);
@@ -85,7 +108,20 @@ export function PostCard({
   const max = Math.max(1, ...(views?.hourly ?? []).map((h) => h.value));
 
   return (
-    <article className={`post ${detail ? "detail" : ""}`} ref={ref as React.RefObject<HTMLElement>}>
+    <article
+      className={`post ${detail ? "detail" : "clickable"}`}
+      ref={ref as React.RefObject<HTMLElement>}
+      onClick={openThread}
+      onKeyDown={(e) => {
+        if (!detail && (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
+          e.preventDefault();
+          router.push(`/post/${post.ts}`);
+        }
+      }}
+      tabIndex={detail ? undefined : 0}
+      role={detail ? undefined : "link"}
+      aria-label={detail ? undefined : `Open post by ${post.handle}`}
+    >
       <Link href={`/u/${post.handle}`} className="avatar">
         {author?.avatar_key ? (
           <img src={mediaUrl(author.avatar_key)} alt="" />
@@ -108,7 +144,16 @@ export function PostCard({
 
         {post.reply_to && (
           <div className="muted small">
-            replying to <Link href={`/post/${post.reply_to}`} className="tag">a post</Link>
+            Replying to{" "}
+            {parentHandle ? (
+              <Link href={`/u/${parentHandle}`} className="tag">
+                @{parentHandle}
+              </Link>
+            ) : (
+              <Link href={`/post/${post.reply_to}`} className="tag">
+                a post
+              </Link>
+            )}
           </div>
         )}
 

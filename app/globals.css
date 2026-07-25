@@ -168,3 +168,19 @@ label.field span { display: block; margin-bottom: 5px; }
 }
 @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) { .skeleton .bar::after, .skeleton .circle::after { animation: none; } }
+
+/* A post opens its thread when clicked; the pointer says so, and keyboard
+   focus is visible since the card is reachable by tab. */
+.post.clickable { cursor: pointer; }
+.post.clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The conversation above the post being viewed, joined by a line down the
+   avatar column so it reads as one thread rather than separate posts. */
+.ancestors .post { border-bottom: 0; padding-bottom: 4px; position: relative; }
+.ancestors .post::after {
+  content: ""; position: absolute; left: 41px; top: 62px; bottom: -4px;
+  width: 2px; background: var(--line); border-radius: 2px;
+}
+/* The post being viewed is the subject of the page: a little more room. */
+.post.detail { padding-top: 16px; padding-bottom: 16px; }
+.post.detail .body { font-size: 22px; line-height: 1.4; }
