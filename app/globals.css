@@ -188,10 +188,15 @@ label.field span { display: block; margin-bottom: 5px; }
 /* ── Lightbox ────────────────────────────────────────────────────────────── */
 .media { cursor: zoom-in; }
 dialog.lightbox {
-  border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh;
-  width: 100%; height: 100%; overflow: hidden;
-  display: grid; place-items: center;
+  border: 0; padding: 0; background: transparent;
+  inset: 0; width: 100vw; height: 100dvh; max-width: 100vw; max-height: 100dvh;
+  overflow: hidden;
 }
+/* Only the *open* dialog gets a display value. Setting `display` on the base
+   rule overrides the browser's `dialog:not([open]) { display: none }`, which
+   leaves the dialog laid out in the page with no backdrop — it stops being a
+   modal at all. */
+dialog.lightbox[open] { display: grid; place-items: center; }
 dialog.lightbox::backdrop { background: rgba(0, 0, 0, 0.86); }
 dialog.lightbox img {
   max-width: 94vw; max-height: 92vh; width: auto; height: auto;
