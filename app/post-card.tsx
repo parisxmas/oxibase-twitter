@@ -8,6 +8,7 @@ import { mediaUrl } from "@/lib/oxibase";
 import { useSession, authHeader } from "@/lib/session";
 import { relativeTime, type Post, type Profile } from "@/lib/types";
 import { deletePost, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
+import { IconBookmark, IconChart, IconHeart, IconReply, IconRepost, IconTrash } from "./icons";
 
 export type Counts = { likes: number; reposts: number; replies: number };
 
@@ -117,7 +118,7 @@ export function PostCard({
 
         <div className="actions">
           <Link href={`/post/${post.ts}`} className="muted small" style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
-            ↩ {counts.replies || ""}
+            <IconReply size={19} /> {counts.replies || ""}
           </Link>
           <button
             className={`repost ${reposted ? "on" : ""}`}
@@ -125,7 +126,7 @@ export function PostCard({
             title={session ? "Repost" : "Sign in to repost"}
             onClick={() => act(() => toggleRepost(post, session!.email, reposted))}
           >
-            ⇄ {counts.reposts || ""}
+            <IconRepost size={19} /> {counts.reposts || ""}
           </button>
           <button
             className={`like ${liked ? "on" : ""}`}
@@ -133,7 +134,7 @@ export function PostCard({
             title={session ? "Like" : "Sign in to like"}
             onClick={() => act(() => toggleLike(post, session!.email, liked))}
           >
-            {liked ? "♥" : "♡"} {counts.likes || ""}
+            <IconHeart size={19} filled={liked} /> {counts.likes || ""}
           </button>
           <button
             className={`save ${saved ? "on" : ""}`}
@@ -141,11 +142,11 @@ export function PostCard({
             title={session ? "Bookmark" : "Sign in to bookmark"}
             onClick={() => act(() => toggleBookmark(post, session!.email, saved))}
           >
-            {saved ? "★" : "☆"}
+            <IconBookmark size={19} filled={saved} />
           </button>
           {mine && showAnalytics && (
             <button onClick={loadAnalytics} title="Views over time — only you can see this">
-              ▤ {views ? views.total : ""}
+              <IconChart size={19} /> {views ? views.total : ""}
             </button>
           )}
           {mine && (
@@ -156,7 +157,7 @@ export function PostCard({
                 if (confirm("Delete this post?")) act(() => deletePost(post, session!.email));
               }}
             >
-              ✕
+              <IconTrash size={19} />
             </button>
           )}
         </div>

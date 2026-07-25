@@ -6,12 +6,13 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
 import { myNotifications, profileByOwner } from "@/lib/data";
 import { oxibase } from "@/lib/oxibase";
+import { IconBell, IconBookmark, IconHome, IconLogout, IconSearch, IconSettings, IconUser } from "./icons";
 
 const LINKS = [
-  ["/", "Home", "◎"],
-  ["/search", "Search", "⌕"],
-  ["/notifications", "Notifications", "◔"],
-  ["/bookmarks", "Bookmarks", "❏"],
+  ["/", "Home", IconHome],
+  ["/search", "Search", IconSearch],
+  ["/notifications", "Notifications", IconBell],
+  ["/bookmarks", "Bookmarks", IconBookmark],
 ] as const;
 
 export function Rail() {
@@ -37,9 +38,9 @@ export function Rail() {
   return (
     <nav className="rail">
       <div className="brand">Chirp</div>
-      {LINKS.map(([href, label, icon]) => (
+      {LINKS.map(([href, label, Icon]) => (
         <Link key={href} href={href} className={path === href ? "active" : undefined}>
-          <span aria-hidden>{icon}</span>
+          <Icon />
           <span className="label">{label}</span>
           {href === "/notifications" && unread > 0 && <span className="badge">{unread}</span>}
         </Link>
@@ -47,22 +48,22 @@ export function Rail() {
       {ready && session && (
         <>
           <Link href={handle ? `/u/${handle}` : "/settings"} className={path.startsWith("/u/") ? "active" : undefined}>
-            <span aria-hidden>☺</span>
+            <IconUser />
             <span className="label">Profile</span>
           </Link>
           <Link href="/settings" className={path === "/settings" ? "active" : undefined}>
-            <span aria-hidden>⚙</span>
+            <IconSettings />
             <span className="label">Settings</span>
           </Link>
           <button className="navitem" onClick={signOut}>
-            <span aria-hidden>⏻</span>
+            <IconLogout />
             <span className="label">Sign out</span>
           </button>
         </>
       )}
       {ready && !session && (
         <Link href="/login">
-          <span aria-hidden>→</span>
+          <IconLogout />
           <span className="label">Sign in</span>
         </Link>
       )}

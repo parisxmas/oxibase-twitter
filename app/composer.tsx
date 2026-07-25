@@ -6,6 +6,7 @@ import { useSession, authHeader } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
 import { createPost, notify, profileByOwner } from "@/lib/data";
 import { MAX_POST_LENGTH, defaultHandle } from "@/lib/types";
+import { IconClose, IconImage } from "./icons";
 
 export function Composer({
   replyTo,
@@ -128,15 +129,15 @@ export function Composer({
               style={{ position: "absolute", top: 8, right: 8, padding: "2px 10px" }}
               onClick={clearImage}
             >
-              ✕
+              <IconClose size={18} />
             </button>
             <div className="muted small">{preview.note}</div>
           </div>
         )}
         {error && <div className="error" style={{ margin: "8px 0" }}>{error}</div>}
         <div className="row">
-          <button className="ghost" onClick={() => fileRef.current?.click()} title="Add an image">
-            ▣
+          <button className="ghost icon" onClick={() => fileRef.current?.click()} title="Add an image">
+            <IconImage size={21} />
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickImage} />
           <span className={`counter ${over ? "over" : ""}`}>{left}</span>

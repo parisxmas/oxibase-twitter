@@ -50,12 +50,14 @@ a { color: inherit; text-decoration: none; }
 .rail { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; padding: 12px 8px; border-right: 1px solid var(--line); }
 .rail .brand { font-size: 27px; font-weight: 800; letter-spacing: -0.03em; padding: 8px 12px 14px; color: var(--accent); }
 .rail a, .rail button.navitem {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 14px;
   padding: 10px 12px; border-radius: 999px; color: var(--ink);
   font-size: 20px; background: none; border: 0; cursor: pointer; font-family: inherit; width: 100%; text-align: left;
 }
 .rail a:hover, .rail button.navitem:hover { background: var(--panel-2); }
 .rail a.active { font-weight: 700; }
+.rail svg, .actions svg, .topbar svg { flex: none; }
+button.ghost.icon { padding: 6px 10px; display: inline-flex; align-items: center; }
 .rail .badge { margin-left: auto; background: var(--accent); color: var(--accent-ink); border-radius: 999px; font-size: 13px; padding: 1px 7px; font-weight: 700; }
 
 main { border-right: 1px solid var(--line); min-height: 100vh; min-width: 0; overflow-x: hidden; }
@@ -91,7 +93,7 @@ main { border-right: 1px solid var(--line); min-height: 100vh; min-width: 0; ove
 .avatar.sm { width: 38px; height: 38px; font-size: 15px; }
 
 .actions { display: flex; gap: 4px; margin-top: 8px; margin-left: -8px; }
-.actions button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 16px; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 999px; cursor: pointer; }
+.actions button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 16px; display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 999px; cursor: pointer; }
 .actions button:hover { background: var(--panel-2); color: var(--ink); }
 .actions button.on.like { color: var(--like); }
 .actions button.on.repost { color: var(--repost); }

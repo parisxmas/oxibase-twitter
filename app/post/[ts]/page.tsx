@@ -12,6 +12,7 @@ import type { Post } from "@/lib/types";
 import { Composer } from "../../composer";
 import { Feed, useFeedData } from "../../feed";
 import { Spinner } from "../../loading-ui";
+import { IconBack } from "../../icons";
 
 export default function Thread({ params }: { params: Promise<{ ts: string }> }) {
   const { ts } = use(params);
@@ -39,7 +40,7 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
   if (!post) {
     return (
       <>
-        <div className="topbar"><Link href="/">←</Link><h1>Post</h1></div>
+        <div className="topbar"><Link href="/" aria-label="Back"><IconBack size={22} /></Link><h1>Post</h1></div>
         <p className="center muted">This post is gone.</p>
       </>
     );
@@ -48,7 +49,7 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
   return (
     <>
       <div className="topbar">
-        <Link href="/">←</Link>
+        <Link href="/" aria-label="Back"><IconBack size={22} /></Link>
         <h1>Post</h1>
       </div>
       <Feed posts={[post]} state={state} onChanged={load} showAnalytics detail />
