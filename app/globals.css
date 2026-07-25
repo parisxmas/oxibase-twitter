@@ -101,9 +101,16 @@ main { border-right: 1px solid var(--line); min-height: 100vh; min-width: 0; ove
 .tag { color: var(--accent); }
 
 /* ── Composer ────────────────────────────────────────────────────────────── */
-.composer { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
-.composer textarea { width: 100%; background: none; border: 0; color: var(--ink); font: inherit; font-size: 23px; resize: none; outline: none; min-height: 54px; }
-.composer .row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.composer { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+/* One line when idle, grown to fit by the composer as you type — an empty box
+   should not reserve the space of a paragraph. */
+.composer textarea {
+  width: 100%; background: none; border: 0; color: var(--ink);
+  font: inherit; font-size: 23px; line-height: 1.35;
+  resize: none; outline: none; overflow: hidden;
+  min-height: 34px; padding: 4px 0; display: block;
+}
+.composer .row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
 .counter { font-size: 16px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
 .counter.over { color: var(--danger); font-weight: 700; }
 

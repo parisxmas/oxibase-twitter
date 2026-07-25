@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { mediaUrl } from "@/lib/oxibase";
 import { useSession, authHeader } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
@@ -23,6 +23,16 @@ export function Composer({
   const [preview, setPreview] = useState<{ url: string; note: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const blobRef = useRef<Blob | null>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  // Grow to fit what has been typed: reset to auto first so the box can also
+  // shrink again when text is deleted.
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [body]);
 
   if (!session) return null;
 
@@ -101,6 +111,8 @@ export function Composer({
       <div className="avatar">{session.email.slice(0, 1).toUpperCase()}</div>
       <div>
         <textarea
+          ref={textRef}
+          rows={1}
           value={body}
           placeholder={placeholder}
           onChange={(e) => setBody(e.target.value)}
