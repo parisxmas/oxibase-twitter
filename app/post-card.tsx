@@ -1,6 +1,11 @@
 "use client";
 
 // One post, with its actions. Used by every timeline in the app.
+//
+// Links here are `prefetch={false}` deliberately. Next fetches the payload of
+// every in-viewport link by default, which in a feed means two route fetches
+// per post — dozens of requests for pages nobody has asked for. Navigation is
+// still fast; it just starts when the reader actually clicks.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -140,7 +145,7 @@ export function PostCard({
       role={detail ? undefined : "link"}
       aria-label={detail ? undefined : `Open post by ${post.handle}`}
     >
-      <Link href={`/u/${post.handle}`} className="avatar">
+      <Link href={`/u/${post.handle}`} className="avatar" prefetch={false}>
         {author?.avatar_key ? (
           <img src={mediaUrl(author.avatar_key)} alt="" />
         ) : (
@@ -150,12 +155,12 @@ export function PostCard({
 
       <div>
         <div className="head">
-          <Link href={`/u/${post.handle}`} className="name">
+          <Link href={`/u/${post.handle}`} className="name" prefetch={false}>
             {author?.name ?? post.handle}
           </Link>
           <span className="at">@{post.handle}</span>
           <span className="dot">·</span>
-          <Link href={`/post/${post.ts}`} className="when">
+          <Link href={`/post/${post.ts}`} className="when" prefetch={false}>
             {relativeTime(post.ts)}
           </Link>
         </div>
@@ -164,11 +169,11 @@ export function PostCard({
           <div className="muted small">
             Replying to{" "}
             {parentHandle ? (
-              <Link href={`/u/${parentHandle}`} className="tag">
+              <Link href={`/u/${parentHandle}`} className="tag" prefetch={false}>
                 @{parentHandle}
               </Link>
             ) : (
-              <Link href={`/post/${post.reply_to}`} className="tag">
+              <Link href={`/post/${post.reply_to}`} className="tag" prefetch={false}>
                 a post
               </Link>
             )}
@@ -198,7 +203,12 @@ export function PostCard({
         )}
 
         <div className="actions">
-          <Link href={`/post/${post.ts}`} className="muted small" style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
+          <Link
+            href={`/post/${post.ts}`}
+            className="muted small"
+            prefetch={false}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}
+          >
             <IconReply size={19} /> {counts.replies || ""}
           </Link>
           <button
@@ -284,14 +294,14 @@ function linkify(body: string): React.ReactNode[] {
   return body.split(/(\s+)/).map((chunk, i) => {
     if (/^#[\p{L}\p{N}_]+$/u.test(chunk)) {
       return (
-        <Link key={i} href={`/search?q=${encodeURIComponent(chunk)}`} className="tag">
+        <Link key={i} href={`/search?q=${encodeURIComponent(chunk)}`} className="tag" prefetch={false}>
           {chunk}
         </Link>
       );
     }
     if (/^@[a-z0-9_]+$/i.test(chunk)) {
       return (
-        <Link key={i} href={`/u/${chunk.slice(1).toLowerCase()}`} className="tag">
+        <Link key={i} href={`/u/${chunk.slice(1).toLowerCase()}`} className="tag" prefetch={false}>
           {chunk}
         </Link>
       );

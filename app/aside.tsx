@@ -44,7 +44,7 @@ export function Aside() {
         <h3>Trends</h3>
         {trends.length === 0 && <p className="muted small">Nothing trending yet.</p>}
         {trends.map(([tag, n]) => (
-          <Link key={tag} href={`/search?q=%23${tag}`} style={{ display: "block", padding: "6px 0" }}>
+          <Link key={tag} href={`/search?q=%23${tag}`} prefetch={false} style={{ display: "block", padding: "6px 0" }}>
             <div className="tag">#{tag}</div>
             <div className="muted small">{n} post{n > 1 ? "s" : ""}</div>
           </Link>
@@ -67,7 +67,7 @@ export function Aside() {
               <div key={s.owner} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
                 <div className="avatar sm">{(p?.name ?? s.owner).slice(0, 1).toUpperCase()}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Link href={`/u/${p?.handle ?? ""}`} style={{ fontWeight: 700 }}>
+                  <Link href={`/u/${p?.handle ?? ""}`} prefetch={false} style={{ fontWeight: 700 }}>
                     {p?.name ?? s.owner.split("@")[0]}
                   </Link>
                   <div className="muted small">followed by {s.shared} you follow</div>
