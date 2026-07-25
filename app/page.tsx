@@ -14,25 +14,22 @@ import { timeline } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Composer } from "./composer";
 import { Feed, useFeedData, useLivePosts } from "./feed";
-import { SkeletonFeed } from "./loading-ui";
+import { SkeletonFeed, Spinner } from "./loading-ui";
+import { usePagedPosts } from "./use-paged";
 
 export default function Home() {
   const { session, ready } = useSession();
-  const [posts, setPosts] = useState<Post[]>([]);
   const [pending, setPending] = useState<Post[]>([]);
   const [tab, setTab] = useState<"all" | "following">("all");
   const [following, setFollowing] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    setPosts(await timeline());
+  const fetchPage = useCallback((limit: number, before?: number) => timeline(limit, before), []);
+  const { posts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
+
+  const load = useCallback(() => {
     setPending([]);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+    reload();
+  }, [reload]);
 
   // Who the signed-in reader follows — a SQL query, served by a route handler.
   useEffect(() => {
@@ -48,11 +45,14 @@ export default function Home() {
   // Live arrivals are held rather than injected, so the page does not move
   // under the reader.
   useLivePosts((p) => {
+    if (p.reply_to) return;
     setPending((prev) => (prev.some((x) => x.ts === p.ts) ? prev : [p, ...prev]));
   });
 
-  const shown = (tab === "all" ? posts : posts.filter((p) => following.has(p.owner) || p.owner === session?.email))
-    .filter((p) => !p.reply_to);
+  const shown =
+    tab === "all"
+      ? posts
+      : posts.filter((p) => following.has(p.owner) || p.owner === session?.email);
   const state = useFeedData(shown);
 
   const newOnes = pending.filter((p) => !posts.some((x) => x.ts === p.ts));
@@ -90,16 +90,24 @@ export default function Home() {
       {loading ? (
         <SkeletonFeed />
       ) : (
-        <Feed
-          posts={shown}
-          state={state}
-          onChanged={load}
-          empty={
-            tab === "following"
-              ? "Nothing from the people you follow yet — try the Everyone tab."
-              : "No posts yet. Be the first."
-          }
-        />
+        <>
+          <Feed
+            posts={shown}
+            state={state}
+            onChanged={load}
+            empty={
+              tab === "following"
+                ? "Nothing from the people you follow yet — try the Everyone tab."
+                : "No posts yet. Be the first."
+            }
+          />
+          {/* Crossing this starts the next page, 600px before the end. */}
+          <div ref={sentinel} />
+          {loadingMore && <Spinner />}
+          {done && posts.length > 0 && (
+            <p className="center muted small">That&apos;s everything.</p>
+          )}
+        </>
       )}
     </>
   );

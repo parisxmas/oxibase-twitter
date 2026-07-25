@@ -15,22 +15,25 @@ const db = () => oxibase();
 
 // ── Posts ───────────────────────────────────────────────────────────────────
 
-export async function timeline(limit = 40): Promise<Post[]> {
-  const { data } = await db()
-    .from("posts")
-    .select("*")
-    .order("ts", { ascending: false })
-    .limit(limit);
+/**
+ * A page of top-level posts, newest first.
+ *
+ * Paged by `ts` rather than by offset: a cursor cannot skip or repeat a row
+ * when something is posted while you are reading, which an OFFSET can. Replies
+ * are excluded by the server (`reply_to is null`) so a page of twenty is
+ * twenty visible posts, not twenty rows of which some are hidden.
+ */
+export async function timeline(limit = 20, before?: number): Promise<Post[]> {
+  let q = db().from("posts").select("*").is("reply_to", null);
+  if (before) q = q.lt("ts", before);
+  const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];
 }
 
-export async function postsByHandle(handle: string, limit = 40): Promise<Post[]> {
-  const { data } = await db()
-    .from("posts")
-    .select("*")
-    .eq("handle", handle)
-    .order("ts", { ascending: false })
-    .limit(limit);
+export async function postsByHandle(handle: string, limit = 20, before?: number): Promise<Post[]> {
+  let q = db().from("posts").select("*").eq("handle", handle);
+  if (before) q = q.lt("ts", before);
+  const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];
 }
 

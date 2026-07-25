@@ -72,6 +72,16 @@ links and social sign-in only return a session to a listed URL.
 Fits the free plan: static pages plus five small handlers, and images are resized in the browser
 because a Vercel function body is capped at 4.5 MB.
 
+## Seeding a lot of it
+
+```bash
+OXIBASE_SERVICE_KEY=… COUNT=1000 node scripts/seed-many.mjs
+```
+
+Writes `COUNT` posts across the demo accounts, one in five carrying an image,
+spread over the last month. Posts go in batches of 50 and images upload eight at
+a time, so a thousand posts is about twenty requests rather than a thousand.
+
 ## Notes
 
 - Demo accounts are `*@demo.chirp`; `npm run seed` rewrites only those rows.

@@ -7,35 +7,42 @@ import { postsByHandle, profileByHandle } from "@/lib/data";
 import type { Post, Profile } from "@/lib/types";
 import { Feed, useFeedData } from "../../feed";
 import { Spinner } from "../../loading-ui";
+import { usePagedPosts } from "../../use-paged";
 import { FollowButton } from "../../follow-button";
 
 export default function ProfilePage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = use(params);
   const { session } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [graph, setGraph] = useState<{ following: string[]; followers: string[] }>({ following: [], followers: [] });
-  const [loading, setLoading] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  const fetchPage = useCallback(
+    (limit: number, before?: number) => postsByHandle(handle, limit, before),
+    [handle],
+  );
+  const { posts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
   const load = useCallback(async () => {
-    const [p, ps] = await Promise.all([profileByHandle(handle), postsByHandle(handle)]);
+    const p = await profileByHandle(handle);
     setProfile(p);
-    setPosts(ps);
-    setLoading(false);
+    setLoadingProfile(false);
+    reload();
     if (p) {
       const r = await fetch(`/api/follow?who=${encodeURIComponent(p.owner)}`);
       if (r.ok) setGraph(await r.json());
     }
-  }, [handle]);
+  }, [handle, reload]);
 
   useEffect(() => {
     load();
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handle]);
 
   const state = useFeedData(posts);
   const mine = session?.email === profile?.owner;
 
-  if (loading) return <Spinner />;
+  if (loadingProfile) return <Spinner />;
   if (!profile) {
     return (
       <>
@@ -77,7 +84,16 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         </div>
       </div>
 
-      <Feed posts={posts} state={state} onChanged={load} empty="No posts yet." />
+      {loading ? (
+        <Spinner />
+      ) : (
+        <>
+          <Feed posts={posts} state={state} onChanged={load} empty="No posts yet." />
+          <div ref={sentinel} />
+          {loadingMore && <Spinner />}
+          {done && posts.length > 0 && <p className="center muted small">That&apos;s everything.</p>}
+        </>
+      )}
     </>
   );
 }
