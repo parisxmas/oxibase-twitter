@@ -16,23 +16,23 @@ const db = () => oxibase();
 // ── Posts ───────────────────────────────────────────────────────────────────
 
 /**
- * A page of posts, newest first — replies included.
+ * A page of the timeline, newest first.
  *
- * A reply is a post: leaving them out meant someone whose recent activity was
- * all replies simply vanished from the timeline. They are shown with their
- * "Replying to @…" line, which is the context that makes them readable, and
- * `withReplies: false` gives the plain version for a profile's Posts tab.
+ * Replies from other people belong here — they are posts, and leaving them out
+ * makes anyone whose activity is mostly conversation disappear. *Your own*
+ * replies do not: a feed should be what other people are saying, not an echo
+ * of the last thing you typed. Your own top-level posts stay, so you can see
+ * what you published.
+ *
+ * That is one filter — "not mine, or not a reply" — so the exclusion happens in
+ * the query rather than by thinning pages after they arrive.
  *
  * Paged by `ts` rather than by offset: a cursor cannot skip or repeat a row
  * when something is posted while you are reading, which an OFFSET can.
  */
-export async function timeline(
-  limit = 20,
-  before?: number,
-  withReplies = true,
-): Promise<Post[]> {
+export async function timeline(limit = 20, before?: number, me?: string): Promise<Post[]> {
   let q = db().from("posts").select("*");
-  if (!withReplies) q = q.is("reply_to", null);
+  if (me) q = q.or(`owner.neq.${me},reply_to.is.null`);
   if (before) q = q.lt("ts", before);
   const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];
