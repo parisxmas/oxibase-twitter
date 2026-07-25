@@ -23,10 +23,7 @@ export default function Home() {
   const [tab, setTab] = useState<"all" | "following">("all");
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
-  const fetchPage = useCallback(
-    (limit: number, before?: number) => timeline(limit, before, session?.email),
-    [session?.email],
-  );
+  const fetchPage = useCallback((limit: number, before?: number) => timeline(limit, before), []);
   const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
   const load = useCallback(() => {
@@ -46,11 +43,10 @@ export default function Home() {
   }, [session]);
 
   // Live arrivals are held rather than injected, so the page does not move
-  // under the reader. Your own replies are not offered — the timeline does not
-  // show them, so counting them as "new posts" would be a button that changes
-  // nothing.
+  // under the reader. Replies are not offered: the timeline does not show
+  // them, so counting them would be a button that reveals nothing.
   useLivePosts((p) => {
-    if (p.reply_to && p.owner === session?.email) return;
+    if (p.reply_to) return;
     setPending((prev) => (prev.some((x) => x.ts === p.ts) ? prev : [p, ...prev]));
   });
 

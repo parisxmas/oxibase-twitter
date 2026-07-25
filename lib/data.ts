@@ -16,23 +16,18 @@ const db = () => oxibase();
 // ── Posts ───────────────────────────────────────────────────────────────────
 
 /**
- * A page of the timeline, newest first.
+ * A page of the timeline, newest first: **top-level posts only**.
  *
- * Replies from other people belong here — they are posts, and leaving them out
- * makes anyone whose activity is mostly conversation disappear. *Your own*
- * replies do not: a feed should be what other people are saying, not an echo
- * of the last thing you typed. Your own top-level posts stay, so you can see
- * what you published.
- *
- * That is one filter — "not mine, or not a reply" — so the exclusion happens in
- * the query rather than by thinning pages after they arrive.
+ * Replies are conversation, and a feed of them reads as somebody else's inbox —
+ * they are shown where they make sense, in the thread and under a profile's
+ * "Posts & replies" tab. This holds whether or not anyone is signed in, so the
+ * timeline is the same thing to everyone rather than quietly changing shape.
  *
  * Paged by `ts` rather than by offset: a cursor cannot skip or repeat a row
  * when something is posted while you are reading, which an OFFSET can.
  */
-export async function timeline(limit = 20, before?: number, me?: string): Promise<Post[]> {
-  let q = db().from("posts").select("*");
-  if (me) q = q.or(`owner.neq.${me},reply_to.is.null`);
+export async function timeline(limit = 20, before?: number): Promise<Post[]> {
+  let q = db().from("posts").select("*").is("reply_to", null);
   if (before) q = q.lt("ts", before);
   const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];
