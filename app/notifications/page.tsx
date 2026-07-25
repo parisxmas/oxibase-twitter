@@ -11,6 +11,7 @@ import { useSession } from "@/lib/session";
 import { markNotificationsRead, myNotifications } from "@/lib/data";
 import { relativeTime, type Notification } from "@/lib/types";
 import { Spinner } from "../loading-ui";
+import { IconHeart, IconReply, IconRepost, IconUser } from "../icons";
 
 const VERB: Record<Notification["kind"], string> = {
   like: "liked your post",
@@ -19,7 +20,20 @@ const VERB: Record<Notification["kind"], string> = {
   follow: "followed you",
 };
 
-const ICON: Record<Notification["kind"], string> = { like: "♥", reply: "↩", repost: "⇄", follow: "☺" };
+const ICON: Record<Notification["kind"], React.ComponentType<{ size?: number; filled?: boolean }>> = {
+  like: IconHeart,
+  reply: IconReply,
+  repost: IconRepost,
+  follow: IconUser,
+};
+
+/** The colour matches the action, as it does on the post itself. */
+const TINT: Record<Notification["kind"], string> = {
+  like: "var(--like)",
+  reply: "var(--accent)",
+  repost: "var(--repost)",
+  follow: "var(--accent)",
+};
 
 export default function Notifications() {
   const { session, ready } = useSession();
@@ -68,9 +82,13 @@ export default function Notifications() {
       </div>
       {loading && <Spinner />}
       {!loading && items.length === 0 && <p className="center muted">Nothing yet.</p>}
-      {items.map((n) => (
+      {items.map((n) => {
+        const Icon = ICON[n.kind];
+        return (
         <div key={n._id ?? `${n.ts}-${n.actor}`} className={`notif ${n.read ? "" : "unread"}`}>
-          <div className="avatar sm" aria-hidden>{ICON[n.kind]}</div>
+          <div className="avatar sm" aria-hidden style={{ color: TINT[n.kind] }}>
+            <Icon size={20} filled={n.kind === "like"} />
+          </div>
           <div>
             <div>
               <Link href={`/u/${n.actor_handle}`} style={{ fontWeight: 700 }}>
@@ -89,7 +107,8 @@ export default function Notifications() {
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
     </>
   );
 }
