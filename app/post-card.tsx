@@ -11,6 +11,7 @@ import { relativeTime, type Post, type Profile } from "@/lib/types";
 import { deletePost, postByTs, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
 import { IconBookmark, IconChart, IconHeart, IconReply, IconRepost, IconTrash } from "./icons";
 import { Lightbox } from "./lightbox";
+import type { FeedState } from "./feed";
 
 export type Counts = { likes: number; reposts: number; replies: number };
 
@@ -21,7 +22,8 @@ export function PostCard({
   liked,
   reposted,
   saved,
-  onChanged,
+  state,
+  onRemoved,
   showAnalytics = false,
   detail = false,
 }: {
@@ -31,7 +33,9 @@ export function PostCard({
   liked: boolean;
   reposted: boolean;
   saved: boolean;
-  onChanged: () => void;
+  /** Local reaction updates, so a like does not reload the timeline. */
+  state: Pick<FeedState, "applyLike" | "applyRepost" | "applyBookmark">;
+  onRemoved: (ts: number) => void;
   showAnalytics?: boolean;
   /** The single-post page: media may be taller there, as Twitter's is. */
   detail?: boolean;
@@ -92,12 +96,23 @@ export function PostCard({
     router.push(`/post/${post.ts}`);
   }
 
-  async function act(fn: () => Promise<unknown>) {
+  /**
+   * Reactions are applied straight away and reverted if the write is refused.
+   * The alternative — write, then refetch — makes the reader wait a round trip
+   * to see their own click, and refetching the feed would throw away every
+   * page they had scrolled through.
+   */
+  async function react(
+    apply: (ts: number, on: boolean) => void,
+    write: () => Promise<string | null>,
+    on: boolean,
+  ) {
     if (!session) return;
+    apply(post.ts, on);
     setBusy(true);
-    await fn();
+    const error = await write().catch((e) => String(e));
     setBusy(false);
-    onChanged();
+    if (error) apply(post.ts, !on); // the server said no; put it back
   }
 
   async function loadAnalytics() {
@@ -190,7 +205,9 @@ export function PostCard({
             className={`repost ${reposted ? "on" : ""}`}
             disabled={!session || busy}
             title={session ? "Repost" : "Sign in to repost"}
-            onClick={() => act(() => toggleRepost(post, session!.email, reposted))}
+            onClick={() =>
+              react(state.applyRepost, () => toggleRepost(post, session!.email, reposted), !reposted)
+            }
           >
             <IconRepost size={19} /> {counts.reposts || ""}
           </button>
@@ -198,7 +215,9 @@ export function PostCard({
             className={`like ${liked ? "on" : ""}`}
             disabled={!session || busy}
             title={session ? "Like" : "Sign in to like"}
-            onClick={() => act(() => toggleLike(post, session!.email, liked))}
+            onClick={() =>
+              react(state.applyLike, () => toggleLike(post, session!.email, liked), !liked)
+            }
           >
             <IconHeart size={19} filled={liked} /> {counts.likes || ""}
           </button>
@@ -206,7 +225,9 @@ export function PostCard({
             className={`save ${saved ? "on" : ""}`}
             disabled={!session || busy}
             title={session ? "Bookmark" : "Sign in to bookmark"}
-            onClick={() => act(() => toggleBookmark(post, session!.email, saved))}
+            onClick={() =>
+              react(state.applyBookmark, () => toggleBookmark(post, session!.email, saved), !saved)
+            }
           >
             <IconBookmark size={19} filled={saved} />
           </button>
@@ -219,8 +240,13 @@ export function PostCard({
             <button
               title="Delete"
               disabled={busy}
-              onClick={() => {
-                if (confirm("Delete this post?")) act(() => deletePost(post, session!.email));
+              onClick={async () => {
+                if (!confirm("Delete this post?")) return;
+                setBusy(true);
+                const err = await deletePost(post, session!.email);
+                setBusy(false);
+                // Gone from the list in place; no refetch, no lost scroll.
+                if (!err) onRemoved(post.ts);
               }}
             >
               <IconTrash size={19} />

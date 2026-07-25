@@ -24,7 +24,7 @@ export default function Home() {
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
   const fetchPage = useCallback((limit: number, before?: number) => timeline(limit, before), []);
-  const { posts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
+  const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
   const load = useCallback(() => {
     setPending([]);
@@ -95,6 +95,7 @@ export default function Home() {
             posts={shown}
             state={state}
             onChanged={load}
+            onRemoved={(ts) => setPosts((prev) => prev.filter((p) => p.ts !== ts))}
             empty={
               tab === "following"
                 ? "Nothing from the people you follow yet — try the Everyone tab."

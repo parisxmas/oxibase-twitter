@@ -21,7 +21,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
     (limit: number, before?: number) => postsByHandle(handle, limit, before),
     [handle],
   );
-  const { posts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
+  const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
   const load = useCallback(async () => {
     const p = await profileByHandle(handle);
@@ -88,7 +88,13 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         <Spinner />
       ) : (
         <>
-          <Feed posts={posts} state={state} onChanged={load} empty="No posts yet." />
+          <Feed
+            posts={posts}
+            state={state}
+            onChanged={load}
+            onRemoved={(ts) => setPosts((prev) => prev.filter((p) => p.ts !== ts))}
+            empty="No posts yet."
+          />
           <div ref={sentinel} />
           {loadingMore && <Spinner />}
           {done && posts.length > 0 && <p className="center muted small">That&apos;s everything.</p>}

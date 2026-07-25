@@ -155,22 +155,31 @@ export async function myReposts(me: string): Promise<number[]> {
   return ((data ?? []) as Repost[]).map((r) => r.post_ts);
 }
 
-export async function toggleLike(post: Post, me: string, liked: boolean): Promise<void> {
+/** Returns an error message, or null when the write went through. */
+export async function toggleLike(post: Post, me: string, liked: boolean): Promise<string | null> {
   if (liked) {
-    await db().from("likes").delete().eq("post_ts", post.ts).eq("owner", me);
-  } else {
-    await db().from("likes").insert({ owner: me, post_ts: post.ts });
-    await notify(post.owner, me, "like", post.ts);
+    const { error } = await db().from("likes").delete().eq("post_ts", post.ts).eq("owner", me);
+    return error?.message ?? null;
   }
+  const { error } = await db().from("likes").insert({ owner: me, post_ts: post.ts });
+  if (error) return error.message;
+  // The notification is a courtesy, not part of the like: it must not be able
+  // to fail the action the reader took.
+  notify(post.owner, me, "like", post.ts).catch(() => {});
+  return null;
 }
 
-export async function toggleRepost(post: Post, me: string, reposted: boolean): Promise<void> {
+export async function toggleRepost(post: Post, me: string, reposted: boolean): Promise<string | null> {
   if (reposted) {
-    await db().from("reposts").delete().eq("post_ts", post.ts).eq("owner", me);
-  } else {
-    await db().from("reposts").insert({ owner: me, post_ts: post.ts, ts: Date.now() });
-    await notify(post.owner, me, "repost", post.ts);
+    const { error } = await db().from("reposts").delete().eq("post_ts", post.ts).eq("owner", me);
+    return error?.message ?? null;
   }
+  const { error } = await db()
+    .from("reposts")
+    .insert({ owner: me, post_ts: post.ts, ts: Date.now() });
+  if (error) return error.message;
+  notify(post.owner, me, "repost", post.ts).catch(() => {});
+  return null;
 }
 
 // ── Bookmarks (yours alone, by rule) ────────────────────────────────────────
@@ -181,12 +190,11 @@ export async function myBookmarks(): Promise<Bookmark[]> {
   return (data ?? []) as Bookmark[];
 }
 
-export async function toggleBookmark(post: Post, me: string, saved: boolean): Promise<void> {
-  if (saved) {
-    await db().from("bookmarks").delete().eq("post_ts", post.ts).eq("owner", me);
-  } else {
-    await db().from("bookmarks").insert({ owner: me, post_ts: post.ts, ts: Date.now() });
-  }
+export async function toggleBookmark(post: Post, me: string, saved: boolean): Promise<string | null> {
+  const { error } = saved
+    ? await db().from("bookmarks").delete().eq("post_ts", post.ts).eq("owner", me)
+    : await db().from("bookmarks").insert({ owner: me, post_ts: post.ts, ts: Date.now() });
+  return error?.message ?? null;
 }
 
 // ── Profiles ────────────────────────────────────────────────────────────────

@@ -25,7 +25,12 @@ export type FeedState = {
   liked: Set<number>;
   reposted: Set<number>;
   saved: Set<number>;
+  /** Refetch everything — only for changes the local edits cannot express. */
   reload: () => void;
+  /** Apply a reaction locally, so the page does not reload to show a heart. */
+  applyLike: (ts: number, on: boolean) => void;
+  applyRepost: (ts: number, on: boolean) => void;
+  applyBookmark: (ts: number, on: boolean) => void;
 };
 
 /** Load everything that decorates a set of posts. */
@@ -39,6 +44,47 @@ export function useFeedData(_posts: Post[]): FeedState {
   const [nonce, setNonce] = useState(0);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+
+  /**
+   * A reaction changes one number and one flag. Reloading the feed to show
+   * that is both slow and destructive — it discards every page the reader has
+   * scrolled through. These apply the change in place; the caller reverts by
+   * calling again with the opposite value if the write fails.
+   */
+  const bump = useCallback((ts: number, key: keyof Counts, delta: number) => {
+    setCounts((prev) => {
+      const next = new Map(prev);
+      const cur = { ...(next.get(ts) ?? { likes: 0, reposts: 0, replies: 0 }) };
+      cur[key] = Math.max(0, cur[key] + delta);
+      next.set(ts, cur);
+      return next;
+    });
+  }, []);
+
+  const flip = useCallback((set: (fn: (s: Set<number>) => Set<number>) => void, ts: number, on: boolean) => {
+    set((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(ts);
+      else next.delete(ts);
+      return next;
+    });
+  }, []);
+
+  const applyLike = useCallback(
+    (ts: number, on: boolean) => {
+      flip(setLiked, ts, on);
+      bump(ts, "likes", on ? 1 : -1);
+    },
+    [flip, bump],
+  );
+  const applyRepost = useCallback(
+    (ts: number, on: boolean) => {
+      flip(setReposted, ts, on);
+      bump(ts, "reposts", on ? 1 : -1);
+    },
+    [flip, bump],
+  );
+  const applyBookmark = useCallback((ts: number, on: boolean) => flip(setSaved, ts, on), [flip]);
 
   useEffect(() => {
     let alive = true;
@@ -92,7 +138,7 @@ export function useFeedData(_posts: Post[]): FeedState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.email, nonce]);
 
-  return { authors, counts, liked, reposted, saved, reload };
+  return { authors, counts, liked, reposted, saved, reload, applyLike, applyRepost, applyBookmark };
 }
 
 export function Feed({
@@ -102,6 +148,7 @@ export function Feed({
   empty = "Nothing here yet.",
   showAnalytics = true,
   detail = false,
+  onRemoved,
 }: {
   posts: Post[];
   state: FeedState;
@@ -109,6 +156,8 @@ export function Feed({
   empty?: string;
   showAnalytics?: boolean;
   detail?: boolean;
+  /** Remove a deleted post from the list in place, rather than refetching. */
+  onRemoved?: (ts: number) => void;
 }) {
   if (posts.length === 0) {
     return <p className="center muted">{empty}</p>;
@@ -126,10 +175,8 @@ export function Feed({
           saved={state.saved.has(p.ts)}
           showAnalytics={showAnalytics}
           detail={detail}
-          onChanged={() => {
-            state.reload();
-            onChanged();
-          }}
+          state={state}
+          onRemoved={onRemoved ?? (() => onChanged())}
         />
       ))}
     </>
