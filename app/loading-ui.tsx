@@ -17,9 +17,14 @@ export function Spinner({ label }: { label?: string }) {
   );
 }
 
-export function SkeletonFeed({ rows = 5 }: { rows?: number }) {
+export function SkeletonFeed({ rows = 5, spinner = true }: { rows?: number; spinner?: boolean }) {
   return (
     <div role="status" aria-live="polite" aria-label="Loading posts">
+      {spinner && (
+        <div className="loading" style={{ padding: "26px 16px 18px" }}>
+          <div className="spinner" aria-hidden />
+        </div>
+      )}
       {Array.from({ length: rows }, (_, i) => (
         <div className="skeleton" key={i}>
           <div className="circle" />
