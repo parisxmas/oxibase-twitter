@@ -16,22 +16,36 @@ const db = () => oxibase();
 // ── Posts ───────────────────────────────────────────────────────────────────
 
 /**
- * A page of top-level posts, newest first.
+ * A page of posts, newest first — replies included.
+ *
+ * A reply is a post: leaving them out meant someone whose recent activity was
+ * all replies simply vanished from the timeline. They are shown with their
+ * "Replying to @…" line, which is the context that makes them readable, and
+ * `withReplies: false` gives the plain version for a profile's Posts tab.
  *
  * Paged by `ts` rather than by offset: a cursor cannot skip or repeat a row
- * when something is posted while you are reading, which an OFFSET can. Replies
- * are excluded by the server (`reply_to is null`) so a page of twenty is
- * twenty visible posts, not twenty rows of which some are hidden.
+ * when something is posted while you are reading, which an OFFSET can.
  */
-export async function timeline(limit = 20, before?: number): Promise<Post[]> {
-  let q = db().from("posts").select("*").is("reply_to", null);
+export async function timeline(
+  limit = 20,
+  before?: number,
+  withReplies = true,
+): Promise<Post[]> {
+  let q = db().from("posts").select("*");
+  if (!withReplies) q = q.is("reply_to", null);
   if (before) q = q.lt("ts", before);
   const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];
 }
 
-export async function postsByHandle(handle: string, limit = 20, before?: number): Promise<Post[]> {
+export async function postsByHandle(
+  handle: string,
+  limit = 20,
+  before?: number,
+  withReplies = false,
+): Promise<Post[]> {
   let q = db().from("posts").select("*").eq("handle", handle);
+  if (!withReplies) q = q.is("reply_to", null);
   if (before) q = q.lt("ts", before);
   const { data } = await q.order("ts", { ascending: false }).limit(limit);
   return (data ?? []) as Post[];

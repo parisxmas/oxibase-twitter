@@ -17,9 +17,10 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const [graph, setGraph] = useState<{ following: string[]; followers: string[] }>({ following: [], followers: [] });
   const [loadingProfile, setLoadingProfile] = useState(true);
 
+  const [withReplies, setWithReplies] = useState(false);
   const fetchPage = useCallback(
-    (limit: number, before?: number) => postsByHandle(handle, limit, before),
-    [handle],
+    (limit: number, before?: number) => postsByHandle(handle, limit, before, withReplies),
+    [handle, withReplies],
   );
   const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
@@ -82,6 +83,15 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           <span><strong style={{ color: "var(--ink)" }}>{graph.followers.length}</strong> followers</span>
           <span className="engine">sql</span>
         </div>
+      </div>
+
+      <div className="tabs">
+        <button className={withReplies ? "" : "on"} onClick={() => setWithReplies(false)}>
+          Posts
+        </button>
+        <button className={withReplies ? "on" : ""} onClick={() => setWithReplies(true)}>
+          Posts &amp; replies
+        </button>
       </div>
 
       {loading ? (

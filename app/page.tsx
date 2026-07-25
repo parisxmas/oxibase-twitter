@@ -45,7 +45,6 @@ export default function Home() {
   // Live arrivals are held rather than injected, so the page does not move
   // under the reader.
   useLivePosts((p) => {
-    if (p.reply_to) return;
     setPending((prev) => (prev.some((x) => x.ts === p.ts) ? prev : [p, ...prev]));
   });
 
