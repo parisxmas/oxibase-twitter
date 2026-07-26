@@ -32,14 +32,17 @@ export default function Home() {
   const follows = useMemo(() => (followKey ? followKey.split(",") : []), [followKey]);
   const email = session?.email;
 
-  // The Following tab is a different query, not a filter over this one.
-  const fetchPage = useCallback(
+  // The Following tab is a different query, not a filter over this one — so they
+  // are two callbacks, not one that branches. A single branching callback would
+  // depend on the follow list even on the Everyone tab, which does not use it:
+  // the list arrives a moment after sign-in, and the whole timeline reloaded.
+  const fetchAll = useCallback((limit: number, before?: number) => timeline(limit, before), []);
+  const fetchFollowing = useCallback(
     (limit: number, before?: number) =>
-      tab === "following"
-        ? timeline(limit, before, [...follows, ...(email ? [email] : [])])
-        : timeline(limit, before),
-    [tab, follows, email],
+      timeline(limit, before, [...follows, ...(email ? [email] : [])]),
+    [follows, email],
   );
+  const fetchPage = tab === "following" ? fetchFollowing : fetchAll;
   // Held until the stored session is known: otherwise the first page is fetched
   // as the anon reader, then thrown away and refetched as the user.
   const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(
