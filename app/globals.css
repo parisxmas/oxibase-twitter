@@ -245,6 +245,30 @@ label.field span { display: block; margin-bottom: 5px; }
 .post.detail { padding-top: 16px; padding-bottom: 16px; }
 .post.detail .body { font-size: 22px; line-height: 1.4; }
 
+/* ── Emoji panel ─────────────────────────────────────────────────────────── */
+.emoji-wrap { position: relative; display: inline-flex; }
+.emoji-panel {
+  position: absolute; z-index: 30; top: calc(100% + 8px); left: 0;
+  width: 320px; max-width: calc(100vw - 32px); max-height: 280px; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 8px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+  /* Its own scrollbar would be noise in a 320px popover. */
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.emoji-panel::-webkit-scrollbar { width: 0; height: 0; }
+.emoji-panel h4 {
+  position: sticky; top: -8px; margin: 0; padding: 8px 4px 4px;
+  background: var(--panel); color: var(--muted);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); }
+.emoji-grid button {
+  background: none; border: 0; cursor: pointer; border-radius: 8px;
+  font-size: 22px; line-height: 1; padding: 6px 0;
+}
+.emoji-grid button:hover { background: var(--panel-2); }
+.row button.ghost.icon.on { color: var(--accent); }
+
 /* ── Site footer ─────────────────────────────────────────────────────────── */
 /* Two mount points, one component: in the aside on wide screens, at the end of
    the feed once the aside is hidden. Exactly one is ever displayed. */

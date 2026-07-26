@@ -6,7 +6,8 @@ import { useSession } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
 import { createPost, notify, profileByOwner } from "@/lib/data";
 import { MAX_POST_LENGTH, defaultHandle } from "@/lib/types";
-import { IconClose, IconImage } from "./icons";
+import { IconClose, IconImage, IconEmoji } from "./icons";
+import { EmojiPicker } from "./emoji-picker";
 
 export function Composer({
   replyTo,
@@ -22,6 +23,7 @@ export function Composer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ url: string; note: string } | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const blobRef = useRef<Blob | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -39,6 +41,27 @@ export function Composer({
 
   const left = MAX_POST_LENGTH - body.length;
   const over = left < 0;
+
+  /** Put an emoji where the caret is — not at the end, which is never where you
+   *  meant it when you are editing the middle of a sentence. */
+  function insertEmoji(emoji: string) {
+    const el = textRef.current;
+    const start = el?.selectionStart ?? body.length;
+    const end = el?.selectionEnd ?? body.length;
+    const next = body.slice(0, start) + emoji + body.slice(end);
+    // Refuse rather than truncate: half an emoji is not a character.
+    if (next.length > MAX_POST_LENGTH) return;
+    setBody(next);
+    // React writes the value on the next frame; move the caret after that, or it
+    // jumps to the end and the next emoji lands in the wrong place.
+    requestAnimationFrame(() => {
+      const t = textRef.current;
+      if (!t) return;
+      const pos = start + emoji.length;
+      t.focus();
+      t.setSelectionRange(pos, pos);
+    });
+  }
 
   async function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -141,6 +164,17 @@ export function Composer({
             <IconImage size={21} />
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickImage} />
+          <div className="emoji-wrap">
+            <button
+              className={`ghost icon ${emojiOpen ? "on" : ""}`}
+              onClick={() => setEmojiOpen((o) => !o)}
+              title="Add an emoji"
+              aria-expanded={emojiOpen}
+            >
+              <IconEmoji size={21} />
+            </button>
+            {emojiOpen && <EmojiPicker onPick={insertEmoji} onClose={() => setEmojiOpen(false)} />}
+          </div>
           <span className={`counter ${over ? "over" : ""}`}>{left}</span>
           <button className="primary" disabled={busy || over || (!body.trim() && !preview)} onClick={submit}>
             {busy ? "Posting…" : replyTo ? "Reply" : "Post"}
