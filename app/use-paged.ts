@@ -8,7 +8,16 @@ import type { Post } from "@/lib/types";
 
 const PAGE = 20;
 
-export function usePagedPosts(fetchPage: (limit: number, before?: number) => Promise<Post[]>) {
+/**
+ * `enabled` holds the first page back until the caller knows what to ask for:
+ * before the stored session has been read, a timeline query would run as the
+ * anon reader and be thrown away a tick later. `loading` starts true, so the
+ * skeleton covers the wait either way.
+ */
+export function usePagedPosts(
+  fetchPage: (limit: number, before?: number) => Promise<Post[]>,
+  enabled = true,
+) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -29,8 +38,8 @@ export function usePagedPosts(fetchPage: (limit: number, before?: number) => Pro
   }, [fetchPage]);
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    if (enabled) reload();
+  }, [reload, enabled]);
 
   const more = useCallback(async () => {
     if (busy.current || done) return;

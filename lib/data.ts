@@ -218,9 +218,24 @@ export async function toggleBookmark(post: Post, me: string, saved: boolean): Pr
 
 // ── Profiles ────────────────────────────────────────────────────────────────
 
-export async function profiles(): Promise<Profile[]> {
-  const { data } = await db().from("profiles").select("*").limit(200);
-  return (data ?? []) as Profile[];
+// The feed (author names) and the aside (Trends, Who to follow) both need the
+// whole profile list and mount together, which used to mean two identical
+// requests per page load. Callers in the same tick share one in-flight request;
+// it is not cached beyond that, so nothing goes stale.
+let profilesInFlight: Promise<Profile[]> | null = null;
+
+export function profiles(): Promise<Profile[]> {
+  if (profilesInFlight) return profilesInFlight;
+  const req = (async () => {
+    try {
+      const { data } = await db().from("profiles").select("*").limit(200);
+      return (data ?? []) as Profile[];
+    } finally {
+      profilesInFlight = null;
+    }
+  })();
+  profilesInFlight = req;
+  return req;
 }
 
 export async function profileByHandle(handle: string): Promise<Profile | null> {

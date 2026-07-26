@@ -8,7 +8,7 @@
 //               "show N posts" button, the way a timeline should behave
 //   sql       — the "Following" tab reads the follow graph, a relational table
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "@/lib/session";
 import { timeline } from "@/lib/data";
 import type { Post } from "@/lib/types";
@@ -24,15 +24,28 @@ export default function Home() {
   const [following, setFollowing] = useState<string[]>([]);
   const [knowsFollowing, setKnowsFollowing] = useState(false);
 
+  // What the query depends on has to be compared by *value*, or the timeline
+  // re-runs for no reason: `following` is a fresh array every time it is set
+  // (including the empty one on sign-out), and `session` is a fresh object on
+  // every token renewal. Either one reloaded the whole feed.
+  const followKey = following.join(","); // an address cannot contain a comma
+  const follows = useMemo(() => (followKey ? followKey.split(",") : []), [followKey]);
+  const email = session?.email;
+
   // The Following tab is a different query, not a filter over this one.
   const fetchPage = useCallback(
     (limit: number, before?: number) =>
       tab === "following"
-        ? timeline(limit, before, [...following, ...(session ? [session.email] : [])])
+        ? timeline(limit, before, [...follows, ...(email ? [email] : [])])
         : timeline(limit, before),
-    [tab, following, session],
+    [tab, follows, email],
   );
-  const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
+  // Held until the stored session is known: otherwise the first page is fetched
+  // as the anon reader, then thrown away and refetched as the user.
+  const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(
+    fetchPage,
+    ready,
+  );
 
   const load = useCallback(() => {
     setPending([]);
