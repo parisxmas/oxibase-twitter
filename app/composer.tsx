@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { mediaUrl } from "@/lib/oxibase";
-import { useSession, authHeader } from "@/lib/session";
+import { mediaUrl, fetchAuthed } from "@/lib/oxibase";
+import { useSession } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
 import { createPost, notify, profileByOwner } from "@/lib/data";
 import { MAX_POST_LENGTH, defaultHandle } from "@/lib/types";
@@ -76,9 +76,9 @@ export function Composer({
       if (blobRef.current) {
         // Storage writes need the service key, which never reaches a browser,
         // so the upload goes through this app's route.
-        const res = await fetch("/api/upload", {
+        const res = await fetchAuthed("/api/upload", {
           method: "POST",
-          headers: { "Content-Type": blobRef.current.type, ...authHeader(session) },
+          headers: { "Content-Type": blobRef.current.type },
           body: blobRef.current,
         });
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "upload failed");

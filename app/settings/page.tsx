@@ -6,8 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { mediaUrl } from "@/lib/oxibase";
-import { useSession, authHeader } from "@/lib/session";
+import { mediaUrl, fetchAuthed } from "@/lib/oxibase";
+import { useSession } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
 import { profileByHandle, profileByOwner, saveProfile } from "@/lib/data";
 import { defaultHandle, type Profile } from "@/lib/types";
@@ -52,9 +52,9 @@ export default function Settings() {
     setError(null);
     try {
       const { blob, originalBytes } = await prepareImage(file);
-      const res = await fetch("/api/upload", {
+      const res = await fetchAuthed("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": blob.type, ...authHeader(session) },
+        headers: { "Content-Type": blob.type },
         body: blob,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "upload failed");

@@ -10,8 +10,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { mediaUrl } from "@/lib/oxibase";
-import { useSession, authHeader } from "@/lib/session";
+import { mediaUrl, fetchAuthed } from "@/lib/oxibase";
+import { useSession } from "@/lib/session";
 import { relativeTime, type Post, type Profile } from "@/lib/types";
 import { deletePost, postByTs, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
 import { IconBookmark, IconChart, IconHeart, IconReply, IconRepost, IconTrash } from "./icons";
@@ -124,7 +124,7 @@ export function PostCard({
     if (!session) return;
     setOpenAnalytics((o) => !o);
     if (views) return;
-    const r = await fetch(`/api/analytics?post_ts=${post.ts}`, { headers: authHeader(session) });
+    const r = await fetchAuthed(`/api/analytics?post_ts=${post.ts}`);
     if (r.ok) setViews(await r.json());
   }
 

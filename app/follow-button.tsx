@@ -5,7 +5,8 @@
 // verified identity rather than trusting the request.
 
 import { useEffect, useState } from "react";
-import { useSession, authHeader } from "@/lib/session";
+import { useSession } from "@/lib/session";
+import { fetchAuthed } from "@/lib/oxibase";
 import { notify } from "@/lib/data";
 
 export function FollowButton({ target, onChanged }: { target: string; onChanged?: () => void }) {
@@ -24,11 +25,11 @@ export function FollowButton({ target, onChanged }: { target: string; onChanged?
 
   async function toggle() {
     setBusy(true);
-    const res = await fetch(
+    const res = await fetchAuthed(
       following ? `/api/follow?followee=${encodeURIComponent(target)}` : "/api/follow",
       {
         method: following ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json", ...authHeader(session) },
+        headers: { "Content-Type": "application/json" },
         body: following ? undefined : JSON.stringify({ followee: target }),
       },
     );
