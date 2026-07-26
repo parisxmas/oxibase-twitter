@@ -125,6 +125,14 @@ export async function searchPosts(query: string, limit = 40): Promise<Post[]> {
       .limit(limit);
     return (data ?? []) as Post[];
   }
+  // Ranked first: BM25 puts the best match on top, and a post using the term
+  // twice outranks one using it once — which a substring scan cannot do at all.
+  // The engine says so explicitly when a collection has no text index yet, so
+  // the old substring match stays as the fallback rather than a silent empty
+  // result.
+  const ranked = await db().textSearch("posts", q, { limit });
+  if (!ranked.error && ranked.data) return ranked.data as unknown as Post[];
+
   const { data } = await db()
     .from("posts")
     .select("*")
