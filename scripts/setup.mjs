@@ -108,6 +108,29 @@ for (const [name, rules] of Object.entries({ ...RULES, ...OTHER })) {
   console.log(`  ✓ rules: ${name.padEnd(14)} read=${String(rules.read).padEnd(26)}${rate}`);
 }
 
+// ── Duplicate-post guard ────────────────────────────────────────────────────
+// The one spam signal available without reading content: the same author saying
+// the identical thing twice within minutes. A *unique* index makes the engine
+// refuse the second claim (409), and a *TTL* index expires the claim, so the
+// window is the TTL rather than something the app has to sweep.
+//
+// Rules: writable by its owner, readable by nobody — the keys are hashes, but a
+// list of them still tells you who posted when, and nothing needs to read it.
+await api("POST", "/api/rules/post_guards", {
+  read: "false",
+  create: "auth.username == doc.owner",
+  update: "false",
+  delete: "false",
+  rate: { create: "10/min" },
+});
+await api("POST", "/api/post_guards/indexes", { type: "unique", field: "key" });
+await api("POST", "/api/post_guards/indexes", {
+  type: "ttl",
+  field: "ts",
+  expireAfterSeconds: 10 * 60,
+});
+console.log("  ✓ guard: post_guards   unique(key) + ttl(ts, 10m) — no repeat posts");
+
 // ── Document indexes ────────────────────────────────────────────────────────
 // Collections are created implicitly by the first insert, and an implicit
 // collection has no indexes — so without this a fresh deployment scans for every

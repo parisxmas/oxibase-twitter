@@ -10,6 +10,7 @@
 import { dataFetch, oxibase } from "./oxibase";
 import type { Bookmark, Like, Notification, Post, Profile, Repost } from "./types";
 import { defaultHandle, parseTags } from "./types";
+import { DUPE_MESSAGE, dupeKey } from "./dedupe";
 
 const db = () => oxibase();
 
@@ -162,6 +163,23 @@ export async function createPost(input: {
     tags: parseTags(input.body),
     ts: Date.now(),
   };
+  // Claim the (author, parent, body) key first. A unique index on the guard
+  // collection means the *server* refuses a repeat within the window with a 409,
+  // and a TTL index expires the claim afterwards — so the window needs no
+  // bookkeeping here. Only a 409 is treated as a duplicate; any other failure is
+  // let through rather than swallowing a real post over a guard that misbehaved.
+  const key = await dupeKey(input.owner, post.reply_to ?? null, input.body);
+  const guard = await db()
+    .from("post_guards")
+    .insert({ key, owner: input.owner, ts: post.ts });
+  if (guard.error) {
+    const conflict = guard.status === 409 || /duplicate/i.test(guard.error.message ?? "");
+    if (conflict) return { error: DUPE_MESSAGE };
+    // Anything else (the collection missing on a fresh project, a network blip):
+    // do not let a guard failure cost someone their post.
+    console.warn("post guard unavailable:", guard.error.message);
+  }
+
   const { error } = await db().from("posts").insert(post);
   return { post: error ? undefined : post, error: error?.message ?? null };
 }
