@@ -225,6 +225,12 @@ label.field span { display: block; margin-bottom: 5px; }
   content: ""; position: absolute; left: 41px; top: 62px; bottom: -4px;
   width: 2px; background: var(--line); border-radius: 2px;
 }
+/* A reply's own replies: indented under it and joined by the same line, so the
+   nesting is visible without a second page. One level only. */
+.nested { margin-left: 30px; border-left: 2px solid var(--line); }
+.nested .post { padding-left: 14px; }
+.nested-more { display: inline-block; padding: 6px 16px 12px 14px; font-size: 16px; }
+
 /* The post being viewed is the subject of the page: a little more room. */
 .post.detail { padding-top: 16px; padding-bottom: 16px; }
 .post.detail .body { font-size: 22px; line-height: 1.4; }

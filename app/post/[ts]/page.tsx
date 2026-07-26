@@ -7,12 +7,15 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/lib/session";
-import { postByTs, repliesTo } from "@/lib/data";
+import { postByTs, repliesTo, repliesToMany } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Composer } from "../../composer";
 import { Feed, useFeedData } from "../../feed";
 import { Spinner } from "../../loading-ui";
 import { IconBack } from "../../icons";
+
+/** Enough to show the conversation without turning the page into all of it. */
+const NESTED_SHOWN = 3;
 
 export default function Thread({ params }: { params: Promise<{ ts: string }> }) {
   const { ts } = use(params);
@@ -22,12 +25,26 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
   /** The conversation above this post, oldest first. */
   const [ancestors, setAncestors] = useState<Post[]>([]);
   const [replies, setReplies] = useState<Post[]>([]);
+  /** A reply's own replies, by parent timestamp. One level: deeper is a thread
+   *  of its own, which is what opening that reply gives you. */
+  const [nested, setNested] = useState<Record<number, Post[]>>({});
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     const [p, rs] = await Promise.all([postByTs(postTs), repliesTo(postTs)]);
     setPost(p);
     setReplies(rs);
+
+    // The replies of those replies, so a conversation reads as one. Without
+    // them a reply showed a count and nothing else: the only way to see them
+    // was to guess that the count was a link.
+    const grandchildren = await repliesToMany(rs.map((r) => r.ts));
+    const byParent: Record<number, Post[]> = {};
+    for (const g of grandchildren) {
+      if (g.reply_to == null) continue;
+      (byParent[g.reply_to] ??= []).push(g);
+    }
+    setNested(byParent);
 
     // Walk up the chain so a reply is read in context, as a thread should be.
     // Bounded, so a malformed chain cannot loop.
@@ -47,7 +64,8 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
     load();
   }, [load]);
 
-  const all = post ? [...ancestors, post, ...replies] : replies;
+  const nestedAll = Object.values(nested).flat();
+  const all = post ? [...ancestors, post, ...replies, ...nestedAll] : [...replies, ...nestedAll];
   const state = useFeedData(all);
 
   if (loading) return <Spinner />;
@@ -96,13 +114,29 @@ export default function Thread({ params }: { params: Promise<{ ts: string }> }) 
           {replies.length} {replies.length === 1 ? "reply" : "replies"}
         </div>
       )}
-      <Feed
-        posts={replies}
-        state={state}
-        onChanged={load}
-        empty="No replies yet — be the first."
-        showAnalytics={false}
-      />
+      {replies.length === 0 ? (
+        <p className="center muted">No replies yet — be the first.</p>
+      ) : (
+        replies.map((r) => {
+          const kids = nested[r.ts] ?? [];
+          const shown = kids.slice(0, NESTED_SHOWN);
+          return (
+            <div key={r.ts}>
+              <Feed posts={[r]} state={state} onChanged={load} showAnalytics={false} />
+              {shown.length > 0 && (
+                <div className="nested">
+                  <Feed posts={shown} state={state} onChanged={load} showAnalytics={false} />
+                  {kids.length > shown.length && (
+                    <Link href={`/post/${r.ts}`} prefetch={false} className="tag nested-more">
+                      Show all {kids.length} replies
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
     </>
   );
 }

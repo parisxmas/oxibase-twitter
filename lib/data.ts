@@ -56,6 +56,22 @@ export async function postsByHandle(
   return (data ?? []) as Post[];
 }
 
+/**
+ * Replies to any of `parents`, in one request rather than one per reply — a
+ * thread page needs the replies *of* its replies to show a conversation, and
+ * asking per reply would be a query per row on screen.
+ */
+export async function repliesToMany(parents: number[]): Promise<Post[]> {
+  if (parents.length === 0) return [];
+  const { data } = await db()
+    .from("posts")
+    .select("*")
+    .in("reply_to", parents)
+    .order("ts", { ascending: true })
+    .limit(200);
+  return (data ?? []) as Post[];
+}
+
 export async function postByTs(ts: number): Promise<Post | null> {
   const { data } = await db().from("posts").select("*").eq("ts", ts).limit(1);
   return ((data ?? [])[0] as Post) ?? null;
