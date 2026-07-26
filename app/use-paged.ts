@@ -68,7 +68,24 @@ export function usePagedPosts(
       rootMargin: "600px",
     });
     io.observe(node);
-    return () => io.disconnect();
+
+    // Belt and braces: the observer is the mechanism, but it is the part most
+    // likely to misbehave on a given browser (a scroll container in the
+    // ancestry, momentum scrolling, a sentinel with no height). Distance to the
+    // bottom is boring and works everywhere, and `more()` already guards
+    // against running twice or past the end, so the two cannot double-fetch.
+    const onScroll = () => {
+      const el = document.scrollingElement;
+      if (!el) return;
+      if (el.scrollHeight - (window.scrollY + window.innerHeight) < 600) more();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, [more]);
 
   return { posts, setPosts, loading, loadingMore, done, sentinel, reload };
