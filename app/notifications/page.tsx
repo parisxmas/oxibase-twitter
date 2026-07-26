@@ -5,10 +5,11 @@
 // auth.username == doc.owner` means nobody else can read your inbox.
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { oxibase } from "@/lib/oxibase";
 import { useSession } from "@/lib/session";
 import { markNotificationsRead, myNotifications } from "@/lib/data";
+import { NOTIFICATIONS_READ } from "@/lib/events";
 import { relativeTime, type Notification } from "@/lib/types";
 import { Spinner } from "../loading-ui";
 import { IconHeart, IconReply, IconRepost, IconUser } from "../icons";
@@ -37,14 +38,27 @@ const TINT: Record<Notification["kind"], string> = {
 
 export default function Notifications() {
   const { session, ready } = useSession();
+  const email = session?.email;
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  // Which ones were new when this page opened. They are marked read straight
+  // away, so without remembering them the highlight would vanish under the
+  // reader a moment after they arrived — the one thing the page is for.
+  const wasNew = useRef<Set<string>>(new Set());
+  const captured = useRef(false);
+
+  const key = (n: Notification) => String(n._id ?? `${n.ts}-${n.actor}`);
 
   const load = useCallback(async () => {
-    if (!session) return setLoading(false);
-    setItems(await myNotifications());
+    if (!email) return setLoading(false);
+    const list = await myNotifications();
+    if (!captured.current) {
+      for (const n of list) if (!n.read) wasNew.current.add(key(n));
+      captured.current = true;
+    }
+    setItems(list);
     setLoading(false);
-  }, [session]);
+  }, [email]);
 
   useEffect(() => {
     load();
@@ -53,17 +67,21 @@ export default function Notifications() {
   // Live: the same subscription mechanism as the timeline, and the server
   // applies the read rule to the stream too — you only receive your own.
   useEffect(() => {
-    if (!session) return;
+    if (!email) return;
     const sub = oxibase().subscribe("notifications", () => load());
     return () => sub.unsubscribe();
-  }, [session, load]);
+  }, [email, load]);
 
-  // Mark read on leaving the page, so the badge clears once they are seen.
+  // Read means seen, and they are seen now — not when the reader happens to
+  // navigate away, which is what used to leave the badge sitting there through
+  // the whole visit. The rail is told directly rather than waiting for the
+  // change to come back over the realtime socket.
   useEffect(() => {
-    return () => {
-      if (session) markNotificationsRead(session.email).catch(() => {});
-    };
-  }, [session]);
+    if (!email || loading) return;
+    markNotificationsRead(email)
+      .then(() => window.dispatchEvent(new Event(NOTIFICATIONS_READ)))
+      .catch(() => {});
+  }, [email, loading]);
 
   if (ready && !session) {
     return (
@@ -85,7 +103,7 @@ export default function Notifications() {
       {items.map((n) => {
         const Icon = ICON[n.kind];
         return (
-        <div key={n._id ?? `${n.ts}-${n.actor}`} className={`notif ${n.read ? "" : "unread"}`}>
+        <div key={n._id ?? `${n.ts}-${n.actor}`} className={`notif ${wasNew.current.has(key(n)) ? "unread" : ""}`}>
           <div className="avatar sm" aria-hidden style={{ color: TINT[n.kind] }}>
             <Icon size={20} filled={n.kind === "like"} />
           </div>

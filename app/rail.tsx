@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
 import { myNotifications, profileByOwner } from "@/lib/data";
 import { oxibase } from "@/lib/oxibase";
+import { NOTIFICATIONS_READ } from "@/lib/events";
 import { IconBell, IconBookmark, IconHome, IconLogout, IconSearch, IconSettings, IconUser } from "./icons";
 
 const LINKS = [
@@ -32,7 +33,15 @@ export function Rail() {
     refresh();
     profileByOwner(session.email).then((p) => setHandle(p?.handle ?? null));
     const sub = oxibase().subscribe("notifications", refresh);
-    return () => sub.unsubscribe();
+    // Reading them clears the badge immediately; the subscription below then
+    // confirms it. Waiting only for the socket left the count up for seconds
+    // after the reader was already looking at the list.
+    const clear = () => setUnread(0);
+    window.addEventListener(NOTIFICATIONS_READ, clear);
+    return () => {
+      sub.unsubscribe();
+      window.removeEventListener(NOTIFICATIONS_READ, clear);
+    };
   }, [ready, session]);
 
   return (
