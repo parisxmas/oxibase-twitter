@@ -47,6 +47,7 @@ export function Rail() {
   return (
     <nav className="rail">
       <div className="brand">Chirp</div>
+      <div className="brand-sub">OxiBase test microblog</div>
       {LINKS.map(([href, label, Icon]) => (
         <Link key={href} href={href} className={path === href ? "active" : undefined}>
           <Icon />
