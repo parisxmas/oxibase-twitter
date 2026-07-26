@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
+import { followGraph } from "@/lib/follow-graph";
 import { profiles, timeline } from "@/lib/data";
 import { mediaUrl } from "@/lib/oxibase";
 import type { Profile } from "@/lib/types";
@@ -107,9 +108,8 @@ export function Aside() {
       setSuggestedKnown(true);
       return setSuggested([]);
     }
-    fetch(`/api/follow?who=${encodeURIComponent(email)}`)
-      .then((r) => (r.ok ? r.json() : { suggestions: [] }))
-      .then((d) => setSuggested(d.suggestions ?? []))
+    followGraph(email)
+      .then((g) => setSuggested(g.suggestions))
       .finally(() => setSuggestedKnown(true));
   }, [email, nonce]);
 

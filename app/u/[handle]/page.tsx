@@ -8,6 +8,7 @@ import type { Post, Profile } from "@/lib/types";
 import { Feed, useFeedData } from "../../feed";
 import { Spinner } from "../../loading-ui";
 import { usePagedPosts } from "../../use-paged";
+import { followGraph } from "@/lib/follow-graph";
 import { FollowButton } from "../../follow-button";
 
 export default function ProfilePage({ params }: { params: Promise<{ handle: string }> }) {
@@ -31,10 +32,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
     setProfile(p);
     setLoadingProfile(false);
     reload();
-    if (p) {
-      const r = await fetch(`/api/follow?who=${encodeURIComponent(p.owner)}`);
-      if (r.ok) setGraph(await r.json());
-    }
+    if (p) setGraph(await followGraph(p.owner));
   }, [handle, reload]);
 
   useEffect(() => {

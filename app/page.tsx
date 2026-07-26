@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "@/lib/session";
 import { timeline } from "@/lib/data";
+import { followGraph } from "@/lib/follow-graph";
 import type { Post } from "@/lib/types";
 import { Composer } from "./composer";
 import { Feed, useFeedData, useLivePosts } from "./feed";
@@ -63,12 +64,10 @@ export default function Home() {
       setTab("all");
       return;
     }
-    fetch(`/api/follow?who=${encodeURIComponent(session.email)}`)
-      .then((r) => (r.ok ? r.json() : { following: [] }))
-      .then((d) => {
-        setFollowing(d.following ?? []);
-        setKnowsFollowing(true);
-      });
+    followGraph(session.email).then((g) => {
+      setFollowing(g.following);
+      setKnowsFollowing(true);
+    });
   }, [session]);
 
   // Live arrivals are held rather than injected, so the page does not move
