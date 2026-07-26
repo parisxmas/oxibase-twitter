@@ -12,6 +12,11 @@
   --danger: #e5484d;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --hover: rgba(255, 255, 255, 0.03);
+  /* Loading placeholders sit *inside* a `--panel-2` box, so they cannot be
+     `--panel` — that is white in light mode and disappears against it. A bar is
+     one step off its box; the sweep is lighter than the bar in both themes. */
+  --skel-bar: rgba(255, 255, 255, 0.07);
+  --skel-sweep: rgba(255, 255, 255, 0.13);
 }
 
 @media (prefers-color-scheme: light) {
@@ -24,6 +29,8 @@
     --muted: #64748b;
     --accent-ink: #ffffff;
     --hover: rgba(15, 20, 25, 0.03);
+    --skel-bar: rgba(15, 20, 25, 0.08);
+    --skel-sweep: rgba(255, 255, 255, 0.7);
   }
 }
 
@@ -212,16 +219,31 @@ label.field span { display: block; margin-bottom: 5px; }
 /* A skeleton post, so the timeline keeps its shape while it loads rather than
    collapsing and then jumping. */
 .skeleton { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.skeleton .bar, .skeleton .circle { background: var(--panel-2); position: relative; overflow: hidden; }
+.skeleton .bar, .skeleton .circle {
+  background: var(--panel-2); position: relative; overflow: hidden;
+  animation: skel-pulse 1.7s ease-in-out infinite;
+}
 .skeleton .circle { width: 50px; height: 50px; border-radius: 50%; }
 .skeleton .bar { height: 12px; border-radius: 6px; margin-bottom: 9px; }
 .skeleton .bar::after, .skeleton .circle::after {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 7%, transparent), transparent);
-  animation: shimmer 1.8s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skel-sweep) 45%,
+    var(--skel-sweep) 55%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
 }
 @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-@media (prefers-reduced-motion: reduce) { .skeleton .bar::after, .skeleton .circle::after { animation: none; } }
+@keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* Motion is decoration here: the shape already says "loading". */
+@media (prefers-reduced-motion: reduce) {
+  .ph-text, .skeleton .bar, .skeleton .circle { animation: none; }
+  .ph-text::after, .skeleton .bar::after, .skeleton .circle::after { animation: none; }
+}
 
 /* A post opens its thread when clicked; the pointer says so, and keyboard
    focus is visible since the card is reachable by tab. */
@@ -251,22 +273,30 @@ label.field span { display: block; margin-bottom: 5px; }
    line rather than sizing a box is what makes that true. */
 .ph-text {
   color: transparent !important;
-  background: var(--panel);
+  background: var(--skel-bar);
   border-radius: 6px;
   position: relative;
   overflow: hidden;
   display: block;
+  animation: skel-pulse 1.7s ease-in-out infinite;
 }
 .ph-text::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, var(--hover), transparent);
-  animation: shimmer 1.3s infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skel-sweep) 45%,
+    var(--skel-sweep) 55%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .ph-text::after { animation: none; }
-}
+/* Stagger the rows so the panel reads as one surface loading rather than six
+   bars blinking in lockstep. */
+.aside .box > div > div:nth-child(2n) .ph-text { animation-delay: 0.12s; }
+.aside .box > div > div:nth-child(3n) .ph-text { animation-delay: 0.24s; }
 
 /* ── Emoji panel ─────────────────────────────────────────────────────────── */
 .emoji-wrap { position: relative; display: inline-flex; }
