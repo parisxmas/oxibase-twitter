@@ -248,6 +248,17 @@ export async function profileByOwner(owner: string): Promise<Profile | null> {
   return ((data ?? [])[0] as Profile) ?? null;
 }
 
+/**
+ * Persist just the avatar. Adding a photo is its own act — it used to live only
+ * in component state until "Save profile" was pressed, so the picture appeared,
+ * looked saved, and was lost on navigation (leaving the uploaded file orphaned
+ * in storage).
+ */
+export async function setAvatarKey(owner: string, avatar_key: string | null): Promise<string | null> {
+  const { error } = await db().from("profiles").update({ avatar_key }).eq("owner", owner);
+  return error?.message ?? null;
+}
+
 export async function saveProfile(p: Profile): Promise<string | null> {
   const existing = await profileByOwner(p.owner);
   const { error } = existing

@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { mediaUrl, fetchAuthed } from "@/lib/oxibase";
 import { useSession } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
-import { profileByHandle, profileByOwner, saveProfile } from "@/lib/data";
+import { profileByHandle, profileByOwner, saveProfile, setAvatarKey as persistAvatarKey } from "@/lib/data";
 import { defaultHandle, type Profile } from "@/lib/types";
 
 export default function Settings() {
@@ -58,7 +58,23 @@ export default function Settings() {
         body: blob,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "upload failed");
-      setAvatarKey((await res.json()).key as string);
+      const key = (await res.json()).key as string;
+      setAvatarKey(key);
+      // Store it now rather than waiting for "Save profile": the photo is on the
+      // page the moment it uploads, so anything less looks saved and is not.
+      const err = profile
+        ? await persistAvatarKey(session.email, key)
+        : await saveProfile({
+            owner: session.email,
+            handle: handle.trim().toLowerCase().replace(/[^a-z0-9_]/g, ""),
+            name: name.trim() || handle,
+            bio: bio.trim(),
+            avatar_key: key,
+            created_at: Date.now(),
+          });
+      if (err) throw new Error(err);
+      setProfile((prev) => (prev ? { ...prev, avatar_key: key } : prev));
+      setSaved(true);
       setError(null);
       console.info(`avatar resized ${formatBytes(originalBytes)} → ${formatBytes(blob.size)}`);
     } catch (err) {
@@ -69,7 +85,7 @@ export default function Settings() {
   }
 
   async function save() {
-    if (!session) return;
+    if (!session) return setError("your session has expired — sign in again");
     const clean = handle.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (clean.length < 2) return setError("a handle needs at least two characters");
     setBusy(true);

@@ -45,7 +45,7 @@ a { color: inherit; text-decoration: none; }
 /* ── Layout: rail · feed · aside ─────────────────────────────────────────── */
 .app { display: grid; grid-template-columns: 240px minmax(0, 660px) 340px; gap: 0; max-width: 1260px; margin: 0 auto; }
 @media (max-width: 1000px) { .app { grid-template-columns: 68px minmax(0, 1fr); } .aside { display: none; } }
-@media (max-width: 560px) { .app { grid-template-columns: 1fr; } .rail { position: fixed; bottom: 0; left: 0; right: 0; top: auto !important; flex-direction: row !important; height: auto !important; border-top: 1px solid var(--line); background: var(--bg); z-index: 20; padding: 6px !important; justify-content: space-around; } .rail .label { display: none; } .rail .brand { display: none; } main { padding-bottom: 64px; } }
+@media (max-width: 560px) { .app { grid-template-columns: 1fr; } main { padding-bottom: 64px; } }
 
 .rail { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; padding: 12px 8px; border-right: 1px solid var(--line); }
 .rail .brand { font-size: 27px; font-weight: 800; letter-spacing: -0.03em; padding: 8px 12px 14px; color: var(--accent); }
@@ -59,6 +59,42 @@ a { color: inherit; text-decoration: none; }
 .rail svg, .actions svg, .topbar svg { flex: none; }
 button.ghost.icon { padding: 6px 10px; display: inline-flex; align-items: center; }
 .rail .badge { margin-left: auto; background: var(--accent); color: var(--accent-ink); border-radius: 999px; font-size: 13px; padding: 1px 7px; font-weight: 700; }
+
+/* Responsive rail. These blocks sit *after* the .rail rules above on purpose: a
+   media query adds no specificity, so an equally-specific later rule wins — which
+   is why the mobile block below used to need `!important` on some properties, and
+   silently lost on the ones it did not have it on (`position` above all: the
+   bottom bar was never actually fixed). Order fixes it for both breakpoints. */
+
+/* Tablet (561-1000px): the column is 68px, so the contents must fit it. The
+   labels and the 27px wordmark were only dropped below 560px, so in between they
+   overflowed the column and sat on top of the feed. */
+@media (max-width: 1000px) and (min-width: 561px) {
+  .rail { padding: 12px 6px; align-items: center; }
+  .rail .label { display: none; }
+  .rail .brand { font-size: 0; padding: 8px 0 12px; }
+  .rail .brand::after { content: "C"; font-size: 27px; }
+  .rail a, .rail button.navitem { justify-content: center; gap: 0; padding: 10px; width: 44px; position: relative; }
+  /* No room beside the icon, so the unread count rides on it. */
+  .rail .badge { position: absolute; top: 0; right: -2px; margin-left: 0; font-size: 11px; padding: 0 5px; }
+}
+
+/* Phone (≤560px): the rail becomes a bottom bar overlaying the feed, which is
+   what `main`'s 64px bottom padding is reserving room for. No `!important`
+   needed now that this comes last. */
+@media (max-width: 560px) {
+  .rail {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+    flex-direction: row; height: auto; align-items: center;
+    justify-content: space-around; padding: 6px;
+    border-right: 0; border-top: 1px solid var(--line);
+    background: var(--bg); z-index: 20;
+  }
+  .rail .label { display: none; }
+  .rail .brand { display: none; }
+  .rail a, .rail button.navitem { width: auto; justify-content: center; gap: 0; padding: 10px; position: relative; }
+  .rail .badge { position: absolute; top: 0; right: -2px; margin-left: 0; font-size: 11px; padding: 0 5px; }
+}
 
 main { border-right: 1px solid var(--line); min-height: 100vh; min-width: 0; overflow-x: hidden; }
 .topbar { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; align-items: center; gap: 14px; }
