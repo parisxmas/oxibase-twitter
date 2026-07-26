@@ -6,6 +6,7 @@
 // someone else's photo by choosing a clever filename.
 
 import { verifyCaller, service } from "@/lib/server";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
 
 // Vercel caps a function request body at 4.5 MB; the client downscales before
 // sending, and we refuse anything larger rather than failing opaquely.
@@ -16,6 +17,13 @@ export async function POST(req: Request) {
   if (!caller) {
     return Response.json({ error: "sign in to upload an image" }, { status: 401 });
   }
+
+  // The most expensive thing a signed-in user can ask for: each call spends up to
+  // 4MB of the project's 500MB storage quota, with the service key, so no rule
+  // limits it. Counted per verified caller rather than per IP — the identity is
+  // what the quota belongs to.
+  const limited = rateLimit(`upload:${caller.email}`, 20, 5 * 60_000);
+  if (!limited.ok) return tooMany(limited.retryAfter);
 
   const type = req.headers.get("content-type") ?? "application/octet-stream";
   if (!type.startsWith("image/")) {

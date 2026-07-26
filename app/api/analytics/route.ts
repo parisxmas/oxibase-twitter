@@ -6,12 +6,17 @@
 // then checked against the post itself.
 
 import { verifyCaller, service } from "@/lib/server";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
 
 const HOUR_MS = 3_600_000;
 
 export async function GET(req: Request) {
   const caller = await verifyCaller(req);
   if (!caller) return Response.json({ error: "sign in" }, { status: 401 });
+
+  // Reads, but each one is a time-series aggregation the engine performs.
+  const limited = rateLimit(`analytics:${caller.email}`, 120, 60_000);
+  if (!limited.ok) return tooMany(limited.retryAfter);
 
   const postTs = Number(new URL(req.url).searchParams.get("post_ts"));
   if (!Number.isFinite(postTs) || postTs <= 0) {

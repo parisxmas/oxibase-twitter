@@ -12,6 +12,7 @@
 // the caller's verified identity, never a value from the request.
 
 import { verifyCaller, service } from "@/lib/server";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
 
 async function sql(text: string, params: unknown[] = []) {
   const res = await service("POST", "/api/sql", {
@@ -56,6 +57,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const caller = await verifyCaller(req);
   if (!caller) return Response.json({ error: "sign in to follow" }, { status: 401 });
+  // A SQL write with the service key, so rules cannot bound it. Following is a
+  // deliberate act; nobody does it 60 times a minute by hand.
+  const limited = rateLimit(`follow:post:${caller.email}`, 60, 60_000);
+  if (!limited.ok) return tooMany(limited.retryAfter);
   const body = (await req.json().catch(() => null)) as { followee?: string } | null;
   const followee = (body?.followee ?? "").trim();
   if (!followee) return Response.json({ error: "followee is required" }, { status: 400 });
@@ -83,6 +88,10 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const caller = await verifyCaller(req);
   if (!caller) return Response.json({ error: "sign in" }, { status: 401 });
+  // A SQL write with the service key, so rules cannot bound it. Following is a
+  // deliberate act; nobody does it 60 times a minute by hand.
+  const limited = rateLimit(`follow:delete:${caller.email}`, 60, 60_000);
+  if (!limited.ok) return tooMany(limited.retryAfter);
   const followee = new URL(req.url).searchParams.get("followee") ?? "";
   if (!followee) return Response.json({ error: "followee is required" }, { status: 400 });
   try {

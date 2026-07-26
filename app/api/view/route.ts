@@ -7,11 +7,19 @@
 // view, and the point carries no identity — only the post it belongs to.
 
 import { service } from "@/lib/server";
+import { clientKey, rateLimit, tooMany } from "@/lib/rate-limit";
 
 /** A batch cap, so one request cannot ask for an unbounded write. */
 const MAX_BATCH = 200;
 
 export async function POST(req: Request) {
+  // This route takes no caller — a view by a signed-out reader is still a view —
+  // which also makes it the easiest to abuse: impressions are the one number here
+  // anyone could inflate. Since the client batches, a reader scrolling hard sends
+  // a few of these a minute, so 60 is generous and still bounds a flood.
+  const limited = rateLimit(`view:${clientKey(req)}`, 60, 60_000);
+  if (!limited.ok) return tooMany(limited.retryAfter);
+
   const body = (await req.json().catch(() => null)) as
     | { post_ts?: number | number[] }
     | null;

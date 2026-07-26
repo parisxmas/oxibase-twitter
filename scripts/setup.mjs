@@ -40,24 +40,35 @@ const RULES = {
     create: "auth.username == doc.owner",
     update: "auth.username == doc.owner",
     delete: "auth.username == doc.owner",
+    // Per identity, per operation, checked *after* the expression — so a write the
+    // rule refuses never costs anyone budget, and a throttled one answers 429 with
+    // Retry-After rather than 403, because "not yet" is not "no". Ten posts a
+    // minute is far more than a person writes and far less than a script wants.
+    rate: { create: "10/min", update: "30/min", delete: "30/min" },
   },
   likes: {
     read: "true",
     create: "auth.username == doc.owner",
     update: "false",
     delete: "auth.username == doc.owner",
+    // Liking is one tap, so the ceiling is high — it exists to stop a loop, not
+    // an enthusiastic reader.
+    rate: { create: "60/min", delete: "60/min" },
   },
   reposts: {
     read: "true",
     create: "auth.username == doc.owner",
     update: "false",
     delete: "auth.username == doc.owner",
+    rate: { create: "30/min", delete: "30/min" },
   },
   profiles: {
     read: "true",
     create: "auth.username == doc.owner",
     update: "auth.username == doc.owner",
     delete: "false",
+    // An avatar upload writes the row too, so this is not as rare as it sounds.
+    rate: { create: "5/min", update: "20/min" },
   },
   // Yours alone. The read rule references `doc.owner`, which makes it a
   // row-level filter: asking for every bookmark returns only your own.
@@ -66,6 +77,7 @@ const RULES = {
     create: "auth.username == doc.owner",
     update: "false",
     delete: "auth.username == doc.owner",
+    rate: { create: "60/min", delete: "60/min" },
   },
   // Notifications are addressed to you. Anyone may *create* one (liking a post
   // notifies its author), but only the recipient can read them — again per row.
@@ -74,6 +86,9 @@ const RULES = {
     create: "auth != null",
     update: "auth.username == doc.owner",
     delete: "auth.username == doc.owner",
+    // The one collection anyone may write *to someone else*, so it is the one
+    // worth bounding tightest: this is the notification-spam path.
+    rate: { create: "30/min", update: "60/min", delete: "60/min" },
   },
 };
 
@@ -89,7 +104,8 @@ const OTHER = {
 console.log(`# Setting up ${REF} on ${URL_}`);
 for (const [name, rules] of Object.entries({ ...RULES, ...OTHER })) {
   await api("POST", `/api/rules/${name}`, rules);
-  console.log(`  ✓ rules: ${name.padEnd(14)} read=${rules.read}`);
+  const rate = rules.rate ? ` rate=${Object.entries(rules.rate).map(([k, v]) => `${k}:${v}`).join(" ")}` : "";
+  console.log(`  ✓ rules: ${name.padEnd(14)} read=${String(rules.read).padEnd(26)}${rate}`);
 }
 
 // ── Document indexes ────────────────────────────────────────────────────────
