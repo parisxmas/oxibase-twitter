@@ -241,6 +241,26 @@ label.field span { display: block; margin-bottom: 5px; }
 .post.detail { padding-top: 16px; padding-bottom: 16px; }
 .post.detail .body { font-size: 22px; line-height: 1.4; }
 
+/* ── Site footer ─────────────────────────────────────────────────────────── */
+/* Two mount points, one component: in the aside on wide screens, at the end of
+   the feed once the aside is hidden. Exactly one is ever displayed. */
+.site-footer { color: var(--muted); font-size: 14px; line-height: 1.55; }
+.site-footer p { margin: 0 0 10px; }
+.site-footer ul { margin: 0 0 10px; padding-left: 18px; }
+.site-footer li { margin-bottom: 6px; }
+.site-footer strong { color: var(--ink); font-weight: 600; }
+.site-footer a { color: var(--accent); }
+.site-footer .footer-lead { font-size: 15px; }
+.site-footer .footer-warn {
+  background: var(--panel-2); border-left: 3px solid var(--like);
+  border-radius: 0 8px 8px 0; padding: 10px 12px; margin-top: 14px;
+}
+.footer-aside { padding: 4px 2px 24px; }
+.footer-inline { display: none; border-top: 1px solid var(--line); padding: 20px 16px 32px; }
+@media (max-width: 1000px) {
+  .footer-inline { display: block; }
+}
+
 /* ── Lightbox ────────────────────────────────────────────────────────────── */
 .media { cursor: zoom-in; }
 dialog.lightbox {

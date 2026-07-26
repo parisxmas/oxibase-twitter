@@ -234,24 +234,39 @@ export async function toggleBookmark(post: Post, me: string, saved: boolean): Pr
 
 // ── Profiles ────────────────────────────────────────────────────────────────
 
-// The feed (author names) and the aside (Trends, Who to follow) both need the
-// whole profile list and mount together, which used to mean two identical
-// requests per page load. Callers in the same tick share one in-flight request;
-// it is not cached beyond that, so nothing goes stale.
+// Who is who: needed by the feed (author names and avatars) and by the aside,
+// which mount together — and again on every navigation, because each route
+// mounts its own feed. Concurrent callers share one request, and the answer is
+// held briefly afterwards: names and avatars change far more slowly than people
+// click, so a page change should not re-download the list. The window is short
+// enough that an edited profile appears almost at once, and a viewer's own edits
+// are read straight from the row they just wrote.
+const PROFILES_TTL_MS = 30_000;
 let profilesInFlight: Promise<Profile[]> | null = null;
+let profilesCache: { at: number; rows: Profile[] } | null = null;
 
 export function profiles(): Promise<Profile[]> {
+  if (profilesCache && Date.now() - profilesCache.at < PROFILES_TTL_MS) {
+    return Promise.resolve(profilesCache.rows);
+  }
   if (profilesInFlight) return profilesInFlight;
   const req = (async () => {
     try {
       const { data } = await db().from("profiles").select("*").limit(200);
-      return (data ?? []) as Profile[];
+      const rows = (data ?? []) as Profile[];
+      profilesCache = { at: Date.now(), rows };
+      return rows;
     } finally {
       profilesInFlight = null;
     }
   })();
   profilesInFlight = req;
   return req;
+}
+
+/** Drop the cached list — after saving a profile, so the change shows at once. */
+export function invalidateProfiles(): void {
+  profilesCache = null;
 }
 
 export async function profileByHandle(handle: string): Promise<Profile | null> {
@@ -324,11 +339,13 @@ export async function profileByOwner(owner: string): Promise<Profile | null> {
  * in storage).
  */
 export async function setAvatarKey(owner: string, avatar_key: string | null): Promise<string | null> {
+  invalidateProfiles();
   const { error } = await db().from("profiles").update({ avatar_key }).eq("owner", owner);
   return error?.message ?? null;
 }
 
 export async function saveProfile(p: Profile): Promise<string | null> {
+  invalidateProfiles();
   const existing = await profileByOwner(p.owner);
   const { error } = existing
     ? await db().from("profiles").update(p).eq("owner", p.owner)

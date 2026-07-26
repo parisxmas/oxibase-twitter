@@ -7,22 +7,41 @@
 // follow", which is exactly the query a relational engine is for.
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { profiles, timeline } from "@/lib/data";
 import type { Profile } from "@/lib/types";
 import { FollowButton } from "./follow-button";
+import { SiteFooter } from "./site-footer";
+
+/** How long the hashtag counts are allowed to be stale. */
+const TRENDS_TTL_MS = 2 * 60 * 1000;
 
 export function Aside() {
   const { session } = useSession();
+  const email = session?.email;
   const path = usePathname();
   const [trends, setTrends] = useState<[string, number][]>([]);
   const [suggested, setSuggested] = useState<{ owner: string; shared: number }[]>([]);
   const [byOwner, setByOwner] = useState<Map<string, Profile>>(new Map());
   const [nonce, setNonce] = useState(0);
 
+  const lastLoad = useRef(0);
+  const lastNonce = useRef(nonce);
+
+  // Trends are an aggregate over the last 200 posts, and this component lives in
+  // the layout — it survives navigation rather than remounting. Keyed on the path
+  // alone it re-downloaded those 200 posts, and every profile, on *every* click:
+  // four navigations cost five trend fetches. Hashtag counts do not move that
+  // fast, so a route change refreshes them only if they have gone stale, while
+  // an explicit `nonce` bump (following someone) still refreshes immediately.
   useEffect(() => {
+    const forced = nonce !== lastNonce.current;
+    lastNonce.current = nonce;
+    if (!forced && Date.now() - lastLoad.current < TRENDS_TTL_MS) return;
+    lastLoad.current = Date.now();
+
     timeline(200).then((posts) => {
       const counts = new Map<string, number>();
       for (const p of posts) for (const t of p.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
@@ -32,11 +51,11 @@ export function Aside() {
   }, [path, nonce]);
 
   useEffect(() => {
-    if (!session) return setSuggested([]);
-    fetch(`/api/follow?who=${encodeURIComponent(session.email)}`)
+    if (!email) return setSuggested([]);
+    fetch(`/api/follow?who=${encodeURIComponent(email)}`)
       .then((r) => (r.ok ? r.json() : { suggestions: [] }))
       .then((d) => setSuggested(d.suggestions ?? []));
-  }, [session, nonce]);
+  }, [email, nonce]);
 
   return (
     <>
@@ -79,6 +98,8 @@ export function Aside() {
           <span className="engine">sql · self-join</span>
         </div>
       )}
+
+      <SiteFooter placement="aside" />
     </>
   );
 }

@@ -3,6 +3,7 @@ import "./globals.css";
 import { SessionProvider } from "@/lib/session";
 import { Rail } from "./rail";
 import { Aside } from "./aside";
+import { SiteFooter } from "./site-footer";
 
 export const metadata: Metadata = {
   title: "Chirp",
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SessionProvider>
           <div className="app">
             <Rail />
-            <main>{children}</main>
+            <main>
+              {children}
+              <SiteFooter placement="inline" />
+            </main>
             <div className="aside">
               <Aside />
             </div>
