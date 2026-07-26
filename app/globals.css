@@ -245,6 +245,29 @@ label.field span { display: block; margin-bottom: 5px; }
 .post.detail { padding-top: 16px; padding-bottom: 16px; }
 .post.detail .body { font-size: 22px; line-height: 1.4; }
 
+/* ── Aside placeholders ──────────────────────────────────────────────────── */
+/* A placeholder is the real element with its text hidden, so its height is the
+   real height and the panel is its final size from the first paint. Painting the
+   line rather than sizing a box is what makes that true. */
+.ph-text {
+  color: transparent !important;
+  background: var(--panel);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  display: block;
+}
+.ph-text::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--hover), transparent);
+  animation: shimmer 1.3s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-text::after { animation: none; }
+}
+
 /* ── Emoji panel ─────────────────────────────────────────────────────────── */
 .emoji-wrap { position: relative; display: inline-flex; }
 .emoji-panel {
