@@ -55,7 +55,7 @@ behalf, upload over their avatar, or read another author's impressions.
 ```bash
 npm install
 cp .env.example .env.local     # anon key is already there; add the service key
-npm run setup                  # rules, SQL schema, private series
+npm run setup                  # rules, indexes, full-text index, SQL schema, private series
 npm run seed                   # demo accounts, posts, follows
 npm run dev
 ```

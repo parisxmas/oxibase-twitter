@@ -1,5 +1,5 @@
-// One-time project setup: security rules, the SQL schema, and the private
-// series. Idempotent — re-running is safe.
+// One-time project setup: security rules, document indexes, the full-text index,
+// the SQL schema, and the private series. Idempotent — re-running is safe.
 //
 //   OXIBASE_SERVICE_KEY=<service_role key> npm run setup
 
@@ -91,6 +91,42 @@ for (const [name, rules] of Object.entries({ ...RULES, ...OTHER })) {
   await api("POST", `/api/rules/${name}`, rules);
   console.log(`  ✓ rules: ${name.padEnd(14)} read=${rules.read}`);
 }
+
+// ── Document indexes ────────────────────────────────────────────────────────
+// Collections are created implicitly by the first insert, and an implicit
+// collection has no indexes — so without this a fresh deployment scans for every
+// read. It is invisible at demo size and linear afterwards: at ~1k posts the
+// timeline query measured 5.35ms unindexed and 1.12ms indexed (4.8x), because an
+// index turns `order by ts desc limit 20` into a walk of twenty rather than a
+// sort of everything. The flat lookups gain less now and much more later.
+//
+// Each entry is a field the app actually filters or sorts on. Adding one it does
+// not use costs write throughput for nothing, so this list is deliberately not
+// "every field".
+const DOC_INDEXES = {
+  // ts: cursor pagination and every `order=ts.desc`. reply_to: the timeline asks
+  // for top-level posts (`is.null`) and a thread asks for one parent's replies.
+  posts: ["ts", "handle", "reply_to", "owner"],
+  likes: ["owner", "post_ts"],
+  reposts: ["owner", "post_ts"],
+  bookmarks: ["owner"],
+  notifications: ["owner", "ts"],
+  profiles: ["owner", "handle"],
+};
+
+for (const [col, fields] of Object.entries(DOC_INDEXES)) {
+  for (const field of fields) {
+    await api("POST", `/api/${col}/indexes`, { field });
+  }
+  console.log(`  ✓ index: ${col.padEnd(14)} ${fields.join(", ")}`);
+}
+
+// ── Full-text index ─────────────────────────────────────────────────────────
+// Ranked search (BM25) over post bodies. Without it `searchPosts` falls back to
+// a substring match ordered by recency — the server says so explicitly with a
+// 400, which is what the fallback keys off.
+await api("POST", "/api/posts/text_index", { fields: ["body"] });
+console.log("  ✓ text index: posts (body) — search is ranked, not substring");
 
 // ── SQL schema ──────────────────────────────────────────────────────────────
 // The follow graph is the relational part of a microblog: "who to follow" is a
