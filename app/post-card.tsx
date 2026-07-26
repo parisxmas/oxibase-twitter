@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { mediaUrl, fetchAuthed } from "@/lib/oxibase";
+import { recordView } from "@/lib/views";
 import { useSession } from "@/lib/session";
 import { relativeTime, type Post, type Profile } from "@/lib/types";
 import { deletePost, postByTs, toggleBookmark, toggleLike, toggleRepost } from "@/lib/data";
@@ -64,11 +65,9 @@ export function PostCard({
       (entries) => {
         if (entries.some((e) => e.isIntersecting) && !seen.current) {
           seen.current = true;
-          fetch("/api/view", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ post_ts: post.ts }),
-          }).catch(() => {});
+          // Queued, not sent: one request per post meant 28 of them for five
+          // pages of timeline. See lib/views.
+          recordView(post.ts);
           io.disconnect();
         }
       },
