@@ -29,7 +29,13 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); }
-html { -webkit-text-size-adjust: 100%; }
+/* Reserve the scrollbar's width whether or not there is one. The page starts
+   short (a skeleton), then the feed fills in and a scrollbar appears — which
+   narrows the viewport by ~15px, and the layout is centred with a `minmax()`
+   middle column, so *every reload* nudged the whole grid sideways and, below
+   1240px, resized the feed itself. That is the flicker; this is the one-line
+   cure. */
+html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
 body {
   background: var(--bg);
   color: var(--ink);
