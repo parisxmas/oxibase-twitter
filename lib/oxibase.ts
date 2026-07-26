@@ -55,11 +55,23 @@ export function mediaUrl(key: string): string {
  * server applies the same rules it would to any other read.
  */
 export async function dataFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const token = loadSession()?.token ?? ANON;
-  return fetch(`${URL_}/${REF}${path}`, {
-    ...init,
-    headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` },
-  });
+  const ox = oxibase();
+  // The *live* token, not the stored one: the SDK renews it in memory, so
+  // reading localStorage here would send a token an hour out of date.
+  const send = () => {
+    const token = ox.auth.getSession()?.token ?? ANON;
+    return fetch(`${URL_}/${REF}${path}`, {
+      ...init,
+      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` },
+    });
+  };
+  const res = await send();
+  // `.from()` refreshes on a 401 by itself; this path is outside the query
+  // builder, so it has to do the same dance. Concurrent callers coalesce into
+  // one refresh inside the SDK.
+  if (res.status !== 401 || !ox.auth.getSession()) return res;
+  const { error } = await ox.auth.refreshSession();
+  return error ? res : send();
 }
 
 export const SESSION_KEY = "chirp_session";
