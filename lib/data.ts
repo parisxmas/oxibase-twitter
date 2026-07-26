@@ -72,6 +72,31 @@ export async function repliesToMany(parents: number[]): Promise<Post[]> {
   return (data ?? []) as Post[];
 }
 
+/**
+ * Exactly the posts with these timestamps.
+ *
+ * Bookmarks used to be resolved by downloading the newest 200 posts and keeping
+ * the ones that matched, which quietly lost two kinds of bookmark: anything
+ * older than those 200, and **every reply**, because the timeline query is
+ * top-level posts only. Asked for by id, neither can happen.
+ *
+ * Chunked so a long list cannot produce a URL nobody will accept.
+ */
+export async function postsByTsList(list: number[]): Promise<Post[]> {
+  const ids = [...new Set(list)];
+  if (ids.length === 0) return [];
+  const out: Post[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data } = await db()
+      .from("posts")
+      .select("*")
+      .in("ts", ids.slice(i, i + 100))
+      .limit(100);
+    out.push(...((data ?? []) as Post[]));
+  }
+  return out;
+}
+
 export async function postByTs(ts: number): Promise<Post | null> {
   const { data } = await db().from("posts").select("*").eq("ts", ts).limit(1);
   return ((data ?? [])[0] as Post) ?? null;

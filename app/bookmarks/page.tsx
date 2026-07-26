@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
-import { myBookmarks, timeline } from "@/lib/data";
+import { myBookmarks, postsByTsList } from "@/lib/data";
 import type { Post } from "@/lib/types";
 import { Feed, useFeedData } from "../feed";
 import { SkeletonFeed } from "../loading-ui";
@@ -18,9 +18,15 @@ export default function Bookmarks() {
 
   const load = useCallback(async () => {
     if (!session) return setLoading(false);
-    const [marks, all] = await Promise.all([myBookmarks(), timeline(200)]);
-    const keep = new Set(marks.map((b) => b.post_ts));
-    setPosts(all.filter((p) => keep.has(p.ts)));
+    // Ask for the bookmarked posts themselves. Scanning the newest 200 posts for
+    // matches dropped anything older than that — and every bookmarked *reply*,
+    // since the timeline is top-level posts only.
+    const marks = await myBookmarks();
+    const rows = await postsByTsList(marks.map((b) => b.post_ts));
+    const byTs = new Map(rows.map((p) => [p.ts, p]));
+    // Newest bookmarked first, which is the order they were saved in — not the
+    // order the posts happen to have been written in.
+    setPosts(marks.map((b) => byTs.get(b.post_ts)).filter((p): p is Post => !!p));
     setLoading(false);
   }, [session]);
 
