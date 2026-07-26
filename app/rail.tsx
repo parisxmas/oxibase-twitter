@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
-import { myNotifications, profileByOwner } from "@/lib/data";
+import { myNotifications, viewerProfile } from "@/lib/data";
 import { oxibase } from "@/lib/oxibase";
 import { NOTIFICATIONS_READ } from "@/lib/events";
 import { IconBell, IconBookmark, IconHome, IconLogout, IconSearch, IconSettings, IconUser } from "./icons";
@@ -31,7 +31,7 @@ export function Rail() {
     }
     const refresh = () => myNotifications().then((n) => setUnread(n.filter((x) => !x.read).length));
     refresh();
-    profileByOwner(session.email).then((p) => setHandle(p?.handle ?? null));
+    viewerProfile(session.email).then((p) => setHandle(p?.handle ?? null));
     const sub = oxibase().subscribe("notifications", refresh);
     // Reading them clears the badge immediately; the subscription below then
     // confirms it. Waiting only for the socket left the count up for seconds

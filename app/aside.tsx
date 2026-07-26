@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { profiles, timeline } from "@/lib/data";
+import { mediaUrl } from "@/lib/oxibase";
 import type { Profile } from "@/lib/types";
 import { FollowButton } from "./follow-button";
 import { SiteFooter } from "./site-footer";
@@ -84,7 +85,13 @@ export function Aside() {
             const p = byOwner.get(s.owner);
             return (
               <div key={s.owner} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
-                <div className="avatar sm">{(p?.name ?? s.owner).slice(0, 1).toUpperCase()}</div>
+                <div className="avatar sm">
+                  {p?.avatar_key ? (
+                    <img src={mediaUrl(p.avatar_key)} alt="" />
+                  ) : (
+                    (p?.name ?? s.owner).slice(0, 1).toUpperCase()
+                  )}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Link href={`/u/${p?.handle ?? ""}`} prefetch={false} style={{ fontWeight: 700 }}>
                     {p?.name ?? s.owner.split("@")[0]}

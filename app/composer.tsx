@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { mediaUrl, fetchAuthed } from "@/lib/oxibase";
 import { useSession } from "@/lib/session";
 import { prepareImage, formatBytes } from "@/lib/image";
-import { createPost, notify, profileByOwner } from "@/lib/data";
+import { createPost, notify, profileByOwner, viewerProfile } from "@/lib/data";
 import { MAX_POST_LENGTH, defaultHandle } from "@/lib/types";
 import { IconClose, IconImage, IconEmoji } from "./icons";
 import { EmojiPicker } from "./emoji-picker";
@@ -24,9 +24,22 @@ export function Composer({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ url: string; note: string } | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [avatarKey, setAvatarKey] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const blobRef = useRef<Blob | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
+
+  // Your own avatar, so the box you type into looks like your posts do. It used
+  // to be the first letter of your email address whatever you had uploaded.
+  const email = session?.email;
+  useEffect(() => {
+    if (!email) return setAvatarKey(null);
+    let alive = true;
+    viewerProfile(email).then((p) => alive && setAvatarKey(p?.avatar_key ?? null));
+    return () => {
+      alive = false;
+    };
+  }, [email]);
 
   // Grow to fit what has been typed: reset to auto first so the box can also
   // shrink again when text is deleted.
@@ -133,7 +146,13 @@ export function Composer({
 
   return (
     <div className="composer">
-      <div className="avatar">{session.email.slice(0, 1).toUpperCase()}</div>
+      <div className="avatar">
+        {avatarKey ? (
+          <img src={mediaUrl(avatarKey)} alt="" />
+        ) : (
+          session.email.slice(0, 1).toUpperCase()
+        )}
+      </div>
       <div>
         <textarea
           ref={textRef}

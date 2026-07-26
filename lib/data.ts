@@ -289,9 +289,26 @@ export function profiles(): Promise<Profile[]> {
   return req;
 }
 
-/** Drop the cached list — after saving a profile, so the change shows at once. */
+/**
+ * The signed-in reader's own profile, held for the same short window. The rail
+ * wants their handle and the composer wants their avatar, and both mount on
+ * every page — one row, fetched once.
+ */
+let viewerCache: { owner: string; at: number; row: Profile | null } | null = null;
+
+export async function viewerProfile(owner: string): Promise<Profile | null> {
+  if (viewerCache && viewerCache.owner === owner && Date.now() - viewerCache.at < PROFILES_TTL_MS) {
+    return viewerCache.row;
+  }
+  const row = await profileByOwner(owner);
+  viewerCache = { owner, at: Date.now(), row };
+  return row;
+}
+
+/** Drop the cached lookups — after saving a profile, so the change shows at once. */
 export function invalidateProfiles(): void {
   profilesCache = null;
+  viewerCache = null;
 }
 
 export async function profileByHandle(handle: string): Promise<Profile | null> {
