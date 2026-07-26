@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "@/lib/session";
 import { timeline } from "@/lib/data";
-import { followGraph } from "@/lib/follow-graph";
+import { useFollowing } from "@/lib/following";
 import type { Post } from "@/lib/types";
 import { Composer } from "./composer";
 import { Feed, useFeedData, useLivePosts } from "./feed";
@@ -20,6 +20,7 @@ import { usePagedPosts } from "./use-paged";
 
 export default function Home() {
   const { session, ready } = useSession();
+  const { following: followingSet } = useFollowing();
   const [pending, setPending] = useState<Post[]>([]);
   const [tab, setTab] = useState<"all" | "following">("all");
   const [following, setFollowing] = useState<string[]>([]);
@@ -56,7 +57,9 @@ export default function Home() {
     reload();
   }, [reload]);
 
-  // Who the signed-in reader follows — a SQL query, served by a route handler.
+  // Who the signed-in reader follows. Not fetched here: the session holds one
+  // copy, shared with every follow button, so switching to this tab costs
+  // nothing and the two can never disagree.
   useEffect(() => {
     if (!session) {
       setFollowing([]);
@@ -64,11 +67,11 @@ export default function Home() {
       setTab("all");
       return;
     }
-    followGraph(session.email).then((g) => {
-      setFollowing(g.following);
-      setKnowsFollowing(true);
-    });
-  }, [session]);
+    // Shared with every follow button — the session already knows this.
+    if (followingSet === null) return;
+    setFollowing([...followingSet]);
+    setKnowsFollowing(true);
+  }, [session, followingSet]);
 
   // Live arrivals are held rather than injected, so the page does not move
   // under the reader. Replies are not offered: the timeline does not show

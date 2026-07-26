@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/lib/session";
+import { FollowingProvider } from "@/lib/following";
 import { Rail } from "./rail";
 import { Aside } from "./aside";
 import { SiteFooter } from "./site-footer";
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <SessionProvider>
+          <FollowingProvider>
           <div className="app">
             <Rail />
             <main>
@@ -26,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Aside />
             </div>
           </div>
+          </FollowingProvider>
         </SessionProvider>
       </body>
     </html>
