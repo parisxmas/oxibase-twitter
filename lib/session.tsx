@@ -23,6 +23,7 @@ import {
   useState,
 } from "react";
 import { oxibase, loadSession, saveSession, clearSession } from "./oxibase";
+import { ensureProfile } from "./data";
 
 type Session = { email: string; token: string; refreshToken: string } | null;
 
@@ -77,6 +78,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     oxibase().auth.setSession({ token: s.token, refreshToken: s.refreshToken });
     saveSession(s.token, s.refreshToken, s.email);
     setSession(s);
+    // Every account should have a profile row from the moment it signs in;
+    // without one it has no page and cannot be followed. Best-effort: a failure
+    // here must not block signing in, and the profile page can derive one from
+    // posts anyway.
+    ensureProfile(s.email).catch(() => {});
   }, []);
 
   const signOut = useCallback(() => {

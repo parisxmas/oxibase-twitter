@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import { mediaUrl } from "@/lib/oxibase";
 import { useSession } from "@/lib/session";
-import { postsByHandle, profileByHandle } from "@/lib/data";
+import { derivedProfileByHandle, postsByHandle, profileByHandle } from "@/lib/data";
 import type { Post, Profile } from "@/lib/types";
 import { Feed, useFeedData } from "../../feed";
 import { Spinner } from "../../loading-ui";
@@ -25,7 +25,9 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const { posts, setPosts, loading, loadingMore, done, sentinel, reload } = usePagedPosts(fetchPage);
 
   const load = useCallback(async () => {
-    const p = await profileByHandle(handle);
+    // No saved profile does not mean no account: an author who never edited
+    // theirs still has posts, and those carry enough to show a page.
+    const p = (await profileByHandle(handle)) ?? (await derivedProfileByHandle(handle));
     setProfile(p);
     setLoadingProfile(false);
     reload();

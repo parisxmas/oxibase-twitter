@@ -9,7 +9,7 @@
 
 import { dataFetch, oxibase } from "./oxibase";
 import type { Bookmark, Like, Notification, Post, Profile, Repost } from "./types";
-import { parseTags } from "./types";
+import { defaultHandle, parseTags } from "./types";
 
 const db = () => oxibase();
 
@@ -241,6 +241,59 @@ export function profiles(): Promise<Profile[]> {
 export async function profileByHandle(handle: string): Promise<Profile | null> {
   const { data } = await db().from("profiles").select("*").eq("handle", handle).limit(1);
   return ((data ?? [])[0] as Profile) ?? null;
+}
+
+/**
+ * The profile of someone who has posted but never saved one.
+ *
+ * A profile row is only written when you edit your profile, so an account that
+ * signed up and started posting has none — and had no page at all ("No such
+ * account"), even though its posts were right there in the timeline. That also
+ * meant nobody could follow them: the profile page is the only place with a
+ * follow button. Posts carry their author's handle, so the identity is
+ * recoverable from them.
+ */
+export async function derivedProfileByHandle(handle: string): Promise<Profile | null> {
+  const { data } = await db()
+    .from("posts")
+    .select("owner,ts")
+    .eq("handle", handle)
+    .order("ts", { ascending: true })
+    .limit(1);
+  const row = (data ?? [])[0] as { owner?: string; ts?: number } | undefined;
+  if (!row?.owner) return null;
+  return {
+    owner: row.owner,
+    handle,
+    name: row.owner.split("@")[0],
+    bio: "",
+    avatar_key: null,
+    created_at: row.ts ?? Date.now(),
+  };
+}
+
+/**
+ * Give a signed-in user the profile row they should always have had. A no-op
+ * when it exists, so it is safe to call on every sign-in — without it, an
+ * account is unreachable at /u/<handle> until it happens to visit Settings.
+ */
+export async function ensureProfile(email: string): Promise<void> {
+  if (await profileByOwner(email)) return;
+  const base = defaultHandle(email);
+  let handle = base;
+  for (let n = 2; n <= 6; n++) {
+    const taken = await profileByHandle(handle);
+    if (!taken || taken.owner === email) break;
+    handle = `${base}${n}`;
+  }
+  await db().from("profiles").insert({
+    owner: email,
+    handle,
+    name: email.split("@")[0],
+    bio: "",
+    avatar_key: null,
+    created_at: Date.now(),
+  });
 }
 
 export async function profileByOwner(owner: string): Promise<Profile | null> {
